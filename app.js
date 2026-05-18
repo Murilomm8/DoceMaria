@@ -75,7 +75,7 @@ function addVendaDemo(ficha, lucroDesejadoPct, precoPraticado) {
   const sugerido = ficha.custoTotal * (1 + lucroDesejadoPct / 100);
   const lucro = precoPraticado - ficha.custoTotal;
   const margem = ficha.custoTotal > 0 ? (lucro / ficha.custoTotal) * 100 : 0;
-  const status = lucro < 0 ? "ajustar" : margem < 20 ? "margem curta" : "margem alta";
+  const status = precoPraticado === sugerido ? "margem correta" : lucro < 0 ? "ajustar" : margem < 20 ? "margem curta" : "margem alta";
   state.vendas.push({
     id: uid(), fichaId: ficha.id, produto: ficha.nome, custo: ficha.custoTotal,
     lucroDesejadoPct, precoSugerido: sugerido, precoPraticado, lucro, margemPct: margem, status,
@@ -264,7 +264,7 @@ function renderVendas() {
     const sugerido = f.custoTotal * (1 + ld / 100);
     const lucro = pp - f.custoTotal;
     const margem = f.custoTotal > 0 ? (lucro / f.custoTotal) * 100 : 0;
-    const status = lucro < 0 ? "ajustar" : margem < 20 ? "margem curta" : "margem alta";
+    const status = pp === sugerido ? "margem correta" : lucro < 0 ? "ajustar" : margem < 20 ? "margem curta" : "margem alta";
     state.vendas.push({ id: uid(), fichaId: f.id, produto: f.nome, custo: f.custoTotal, lucroDesejadoPct: ld, precoSugerido: sugerido, precoPraticado: pp, lucro, margemPct: margem, status });
     renderAll();
     e.target.reset();
@@ -274,6 +274,6 @@ function renderVendas() {
 }
 
 function statusBadge(status) {
-  const cls = status === "margem alta" ? "high" : status === "ajustar" ? "warn" : "ok";
+  const cls = status === "margem alta" ? "high" : status === "ajustar" ? "warn" : status === "margem correta" ? "ok" : "ok";
   return `<span class="badge ${cls}">${status}</span>`;
 }
