@@ -76,7 +76,7 @@ function addVendaDemo(ficha, lucroDesejadoPct, precoPraticado) {
   const sugerido = ficha.custoTotal * (1 + lucroDesejadoPct / 100);
   const lucro = precoPraticado - ficha.custoTotal;
   const margem = ficha.custoTotal > 0 ? (lucro / ficha.custoTotal) * 100 : 0;
-  const status = isSamePrice(precoPraticado, sugerido) ? "margem correta" : lucro < 0 ? "ajustar" : margem < 20 ? "margem curta" : "margem alta";
+  const status = calculateSaleStatus(precoPraticado, sugerido, lucro, margem);
   state.vendas.push({
     id: uid(), fichaId: ficha.id, produto: ficha.nome, custo: ficha.custoTotal,
     lucroDesejadoPct, precoSugerido: sugerido, precoPraticado, lucro, margemPct: margem, status,
@@ -146,6 +146,12 @@ function renderDashboard() {
     </ul>`;
 }
 function card(t, v, s) { return `<article class="card"><h3>${t}</h3><p class="value">${v}</p><small>${s}</small></article>`; }
+function calculateSaleStatus(precoPraticado, precoSugerido, lucro, margem) {
+  if (isSamePrice(precoPraticado, precoSugerido)) return "margem correta";
+  if (Number(lucro) < 0) return "ajustar";
+  return Number(margem) < 20 ? "margem curta" : "margem alta";
+}
+
 function progress(label, value, tone) {
   const val = Math.max(0, Math.min(100, Number(value || 0)));
   return `<div class="metric"><div class="metric-head"><span>${label}</span><b>${pct(val)}</b></div><div class="bar"><span class="fill ${tone}" style="width:${val}%"></span></div></div>`;
@@ -253,7 +259,7 @@ function renderVendas() {
       <button type="submit">Salvar venda</button>
     </form>
     <table><thead><tr><th>Produto</th><th>Preço sugerido</th><th>Praticado</th><th>Status</th><th>Lucro</th><th>Ficha</th><th>Ações</th></tr></thead>
-    <tbody>${state.vendas.map((v) => `<tr><td>${v.produto}</td><td>${BRL(v.precoSugerido)}</td><td>${BRL(v.precoPraticado)}</td><td>${statusBadge(v.status)}</td><td>${BRL(v.lucro)}</td><td><button class="secondary" data-open-ficha="${v.fichaId}">Acessar ficha</button></td><td><button class="secondary" data-del-venda="${v.id}">Excluir</button></td></tr>`).join("") || `<tr><td colspan="7">Sem vendas cadastradas.</td></tr>`}</tbody></table>`;
+    <tbody>${state.vendas.map((v) => { const currentStatus = calculateSaleStatus(v.precoPraticado, v.precoSugerido, v.lucro, v.margemPct); v.status = currentStatus; return `<tr><td>${v.produto}</td><td>${BRL(v.precoSugerido)}</td><td>${BRL(v.precoPraticado)}</td><td>${statusBadge(currentStatus)}</td><td>${BRL(v.lucro)}</td><td><button class="secondary" data-open-ficha="${v.fichaId}">Acessar ficha</button></td><td><button class="secondary" data-del-venda="${v.id}">Excluir</button></td></tr>`; }).join("") || `<tr><td colspan="7">Sem vendas cadastradas.</td></tr>`}</tbody></table>`;
   p.querySelector("#btn-cadastro-venda").onclick = () => p.querySelector("#f-venda").scrollIntoView({ behavior: "smooth" });
   p.querySelector("#f-venda").onsubmit = (e) => {
     e.preventDefault();
@@ -265,7 +271,7 @@ function renderVendas() {
     const sugerido = f.custoTotal * (1 + ld / 100);
     const lucro = pp - f.custoTotal;
     const margem = f.custoTotal > 0 ? (lucro / f.custoTotal) * 100 : 0;
-    const status = isSamePrice(pp, sugerido) ? "margem correta" : lucro < 0 ? "ajustar" : margem < 20 ? "margem curta" : "margem alta";
+    const status = calculateSaleStatus(pp, sugerido, lucro, margem);
     state.vendas.push({ id: uid(), fichaId: f.id, produto: f.nome, custo: f.custoTotal, lucroDesejadoPct: ld, precoSugerido: sugerido, precoPraticado: pp, lucro, margemPct: margem, status });
     renderAll();
     e.target.reset();
