@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Doce Maria | Gestão Financeira</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="layout">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="logo-slot">Logo</div>
+          <div>
+            <h1>Doce Maria</h1>
+            <p>Sistema Financeiro</p>
+          </div>
+        </div>
+        <nav class="tabs" id="tabs"></nav>
+      </aside>
+
+      <section class="content">
+      <section class="panel" id="dashboard-panel"></section>
+      <section class="panel hidden" id="custos-panel"></section>
+      <section class="panel hidden" id="ingredientes-panel"></section>
+      <section class="panel hidden" id="fichas-panel"></section>
+      <section class="panel hidden" id="vendas-panel"></section>
+      </section>
+    </main>
+
+    <template id="card-template">
+      <article class="card">
+        <h3></h3>
+        <p class="value"></p>
+        <small></small>
+      </article>
+    </template>
+
+    <script src="app.js"></script>
+  </body>
+</html>
