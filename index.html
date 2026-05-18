@@ -7,19 +7,25 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <header class="topbar">
-      <h1>🧁 Doce Maria — Sistema Financeiro</h1>
-      <p>Gestão local (LocalStorage) para custos, ingredientes, receitas e vendas.</p>
-    </header>
+    <main class="layout">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="logo-slot">Logo</div>
+          <div>
+            <h1>Doce Maria</h1>
+            <p>Sistema Financeiro</p>
+          </div>
+        </div>
+        <nav class="tabs" id="tabs"></nav>
+      </aside>
 
-    <main>
-      <nav class="tabs" id="tabs"></nav>
-
+      <section class="content">
       <section class="panel" id="dashboard-panel"></section>
       <section class="panel hidden" id="custos-panel"></section>
       <section class="panel hidden" id="ingredientes-panel"></section>
       <section class="panel hidden" id="fichas-panel"></section>
       <section class="panel hidden" id="vendas-panel"></section>
+      </section>
     </main>
 
     <template id="card-template">
