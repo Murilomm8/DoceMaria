@@ -56,3 +56,51 @@ h2 { color: var(--primary-dark); margin-top: 0; }
 .fill.ok { background: linear-gradient(90deg, #7bc9a2, #3f8f67); }
 .fill.warn { background: linear-gradient(90deg, #ffd28f, #c8841f); }
 .fill.high { background: linear-gradient(90deg, #f7b4c3, #b75b6f); }
+
+/* Mobile-first improvements */
+@media (max-width: 900px) {
+  main { padding: 0.7rem; }
+  .panel { padding: 0.85rem; border-radius: 14px; }
+  th, td { font-size: 0.86rem; }
+}
+
+@media (max-width: 640px) {
+  .topbar { padding: 0.9rem 0.8rem 0.4rem; }
+  .topbar h1 { font-size: 1.2rem; line-height: 1.25; }
+  .topbar p { font-size: 0.9rem; }
+
+  .tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.45rem;
+  }
+  .tab-btn {
+    width: 100%;
+    font-size: 0.86rem;
+    padding: 0.62rem 0.55rem;
+    text-align: center;
+  }
+
+  .grid { grid-template-columns: 1fr; }
+  .card .value { font-size: 1.1rem; }
+
+  form { grid-template-columns: 1fr; gap: 0.5rem; }
+  input, select, button { width: 100%; font-size: 16px; }
+
+  .actions-row { flex-direction: column; }
+  .toggle-btn, button.secondary { width: 100%; }
+
+  /* Responsive tables with horizontal scroll */
+  table { display: block; width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  thead, tbody, tr { white-space: nowrap; }
+
+  .metric-head { font-size: 0.82rem; }
+  .bar { height: 12px; }
+}
+
+@media (max-width: 420px) {
+  .tabs { grid-template-columns: 1fr; }
+  .tab-btn { font-size: 0.83rem; }
+  h2 { font-size: 1.05rem; }
+  th, td { font-size: 0.82rem; padding: 0.43rem; }
+}
