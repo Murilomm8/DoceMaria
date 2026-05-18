@@ -1,0 +1,106 @@
+:root {
+  --bg: #fffaf5;
+  --panel: #fff;
+  --primary: #d97f92;
+  --primary-dark: #b75b6f;
+  --accent: #f6c2cc;
+  --text: #4f3c41;
+  --muted: #8a6d75;
+  --ok: #3f8f67;
+  --warn: #c8841f;
+  --danger: #b53c3c;
+  --shadow: 0 6px 16px rgba(174, 112, 126, 0.12);
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: Inter, system-ui, Arial, sans-serif;
+  background: radial-gradient(circle at top, #fff 0%, var(--bg) 60%);
+  color: var(--text);
+}
+.topbar { padding: 1.2rem 1rem 0.6rem; text-align: center; }
+.topbar h1 { margin: 0; color: var(--primary-dark); }
+.topbar p { margin: 0.4rem 0; color: var(--muted); }
+main { padding: 0.8rem; max-width: 1200px; margin: 0 auto; }
+.tabs { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
+.tab-btn {
+  border: none; border-radius: 999px; padding: 0.6rem 1rem; cursor: pointer;
+  background: #ffe8ee; color: var(--primary-dark); font-weight: 700;
+}
+.tab-btn.active { background: var(--primary); color: #fff; }
+.panel { background: var(--panel); border-radius: 18px; padding: 1rem; box-shadow: var(--shadow); }
+.hidden { display: none; }
+.grid { display: grid; gap: 0.8rem; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.card { background: #fff7fa; border: 1px solid #f9d4df; border-radius: 14px; padding: 0.8rem; }
+.card h3 { margin: 0; font-size: 0.96rem; }
+.card .value { font-size: 1.25rem; font-weight: 800; margin: 0.3rem 0; }
+form { display: grid; gap: 0.6rem; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); margin: 0.6rem 0 1rem; }
+input, select, button { padding: 0.55rem; border-radius: 10px; border: 1px solid #e7c8d0; }
+button { background: var(--primary); color: #fff; border: none; font-weight: 700; cursor: pointer; }
+button.secondary { background: #ffe4eb; color: var(--primary-dark); }
+table { width: 100%; border-collapse: collapse; margin-top: 0.6rem; }
+th, td { padding: 0.5rem; border-bottom: 1px solid #f2d7df; text-align: left; font-size: 0.92rem; }
+.badge { border-radius: 999px; font-size: 0.75rem; font-weight: 700; padding: 0.2rem 0.5rem; display: inline-block; }
+.badge.ok { background: #d8f2e6; color: var(--ok); }
+.badge.warn { background: #fff0d9; color: var(--warn); }
+.badge.high { background: #ffe5ea; color: var(--primary-dark); }
+.list-inline { display:flex; gap:0.4rem; flex-wrap:wrap; }
+.pill { background:#fff0f5; border:1px solid #f6c5d3; border-radius: 999px; padding: 0.2rem 0.5rem; font-size:0.8rem; }
+h2 { color: var(--primary-dark); margin-top: 0; }
+.toggle-btn { margin-bottom: .7rem; }
+.actions-row { display:flex; gap:.6rem; flex-wrap:wrap; margin-bottom:.6rem; }
+.chart-box { display:grid; gap:.7rem; margin: .5rem 0 1rem; }
+.metric-head { display:flex; justify-content:space-between; font-size:.9rem; margin-bottom:.25rem; }
+.bar { width:100%; background:#ffe8ee; border-radius:999px; overflow:hidden; height:14px; border:1px solid #f4cad6; }
+.fill { display:block; height:100%; }
+.fill.ok { background: linear-gradient(90deg, #7bc9a2, #3f8f67); }
+.fill.warn { background: linear-gradient(90deg, #ffd28f, #c8841f); }
+.fill.high { background: linear-gradient(90deg, #f7b4c3, #b75b6f); }
+
+/* Mobile-first improvements */
+@media (max-width: 900px) {
+  main { padding: 0.7rem; }
+  .panel { padding: 0.85rem; border-radius: 14px; }
+  th, td { font-size: 0.86rem; }
+}
+
+@media (max-width: 640px) {
+  .topbar { padding: 0.9rem 0.8rem 0.4rem; }
+  .topbar h1 { font-size: 1.2rem; line-height: 1.25; }
+  .topbar p { font-size: 0.9rem; }
+
+  .tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.45rem;
+  }
+  .tab-btn {
+    width: 100%;
+    font-size: 0.86rem;
+    padding: 0.62rem 0.55rem;
+    text-align: center;
+  }
+
+  .grid { grid-template-columns: 1fr; }
+  .card .value { font-size: 1.1rem; }
+
+  form { grid-template-columns: 1fr; gap: 0.5rem; }
+  input, select, button { width: 100%; font-size: 16px; }
+
+  .actions-row { flex-direction: column; }
+  .toggle-btn, button.secondary { width: 100%; }
+
+  /* Responsive tables with horizontal scroll */
+  table { display: block; width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  thead, tbody, tr { white-space: nowrap; }
+
+  .metric-head { font-size: 0.82rem; }
+  .bar { height: 12px; }
+}
+
+@media (max-width: 420px) {
+  .tabs { grid-template-columns: 1fr; }
+  .tab-btn { font-size: 0.83rem; }
+  h2 { font-size: 1.05rem; }
+  th, td { font-size: 0.82rem; padding: 0.43rem; }
+}
