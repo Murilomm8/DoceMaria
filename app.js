@@ -9,9 +9,6 @@ const tabs = [
 ];
 
 const state = loadData();
-renderTabs();
-showTab("dashboard");
-renderAll();
 
 function loadData() {
   try { return { ...defaultData, ...JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}") }; }
@@ -22,7 +19,12 @@ const BRL = (n) => Number(n || 0).toLocaleString("pt-BR", { style: "currency", c
 const uid = () => `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 const pct = (n) => `${Number(n || 0).toFixed(1)}%`;
 
+renderTabs();
+showTab("dashboard");
+renderAll();
+
 function renderTabs() {
+
   const container = document.getElementById("tabs");
   container.innerHTML = tabs.map((t) => `<button class="tab-btn" data-tab="${t.id}">${t.label}</button>`).join("");
   container.addEventListener("click", (e) => {
