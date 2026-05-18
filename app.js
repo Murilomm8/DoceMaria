@@ -19,6 +19,71 @@ const BRL = (n) => Number(n || 0).toLocaleString("pt-BR", { style: "currency", c
 const uid = () => `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 const pct = (n) => `${Number(n || 0).toFixed(1)}%`;
 
+const demoData = {
+  custos: [
+    { id: uid(), descricao: "Aluguel", categoria: "fixo", valor: 1800 },
+    { id: uid(), descricao: "Energia elétrica", categoria: "fixo", valor: 420 },
+    { id: uid(), descricao: "Internet", categoria: "fixo", valor: 120 },
+    { id: uid(), descricao: "Taxa maquininha", categoria: "taxa", valor: 180 },
+  ],
+  ingredientes: [
+    { id: uid(), produto: "Farinha de trigo", unidade: "g", quantidade: 1000, valorCompra: 8.5, valorUnitario: 0.0085 },
+    { id: uid(), produto: "Açúcar", unidade: "g", quantidade: 1000, valorCompra: 6.5, valorUnitario: 0.0065 },
+    { id: uid(), produto: "Chocolate", unidade: "g", quantidade: 1000, valorCompra: 28, valorUnitario: 0.028 },
+    { id: uid(), produto: "Frango desfiado", unidade: "g", quantidade: 1000, valorCompra: 24, valorUnitario: 0.024 },
+    { id: uid(), produto: "Queijo", unidade: "g", quantidade: 1000, valorCompra: 32, valorUnitario: 0.032 },
+  ],
+  fichas: [],
+  vendas: [],
+};
+
+function bootstrapDemoDataIfEmpty() {
+  const isEmpty = !state.custos.length && !state.ingredientes.length && !state.fichas.length && !state.vendas.length;
+  if (!isEmpty) return;
+
+  state.custos = demoData.custos;
+  state.ingredientes = demoData.ingredientes;
+
+  const cup = { id: uid(), nome: "Cupcake de Chocolate", itens: [], custoTotal: 0 };
+  addItemFicha(cup, "Farinha de trigo", 120);
+  addItemFicha(cup, "Açúcar", 90);
+  addItemFicha(cup, "Chocolate", 140);
+
+  const cox = { id: uid(), nome: "Coxinha de Frango", itens: [], custoTotal: 0 };
+  addItemFicha(cox, "Farinha de trigo", 160);
+  addItemFicha(cox, "Frango desfiado", 180);
+
+  const esf = { id: uid(), nome: "Esfirra de Queijo", itens: [], custoTotal: 0 };
+  addItemFicha(esf, "Farinha de trigo", 130);
+  addItemFicha(esf, "Queijo", 120);
+
+  state.fichas = [cup, cox, esf];
+
+  addVendaDemo(cup, 80, 18);
+  addVendaDemo(cox, 65, 12);
+  addVendaDemo(esf, 70, 10);
+}
+
+function addItemFicha(ficha, nomeIngrediente, qtd) {
+  const ing = state.ingredientes.find((x) => x.produto === nomeIngrediente);
+  if (!ing) return;
+  ficha.itens.push({ ingredienteId: ing.id, produto: ing.produto, unidade: ing.unidade, qtd, custo: qtd * ing.valorUnitario });
+  ficha.custoTotal = ficha.itens.reduce((a, it) => a + Number(it.custo), 0);
+}
+
+function addVendaDemo(ficha, lucroDesejadoPct, precoPraticado) {
+  const sugerido = ficha.custoTotal * (1 + lucroDesejadoPct / 100);
+  const lucro = precoPraticado - ficha.custoTotal;
+  const margem = ficha.custoTotal > 0 ? (lucro / ficha.custoTotal) * 100 : 0;
+  const status = lucro < 0 ? "ajustar" : margem < 20 ? "margem curta" : "margem alta";
+  state.vendas.push({
+    id: uid(), fichaId: ficha.id, produto: ficha.nome, custo: ficha.custoTotal,
+    lucroDesejadoPct, precoSugerido: sugerido, precoPraticado, lucro, margemPct: margem, status,
+  });
+}
+
+bootstrapDemoDataIfEmpty();
+
 renderTabs();
 showTab("dashboard");
 renderAll();
