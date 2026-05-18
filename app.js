@@ -18,6 +18,7 @@ function saveData() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); 
 const BRL = (n) => Number(n || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const uid = () => `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 const pct = (n) => `${Number(n || 0).toFixed(1)}%`;
+const isSamePrice = (a, b) => Math.abs(Number(a) - Number(b)) < 0.01;
 
 const demoData = {
   custos: [
@@ -75,7 +76,7 @@ function addVendaDemo(ficha, lucroDesejadoPct, precoPraticado) {
   const sugerido = ficha.custoTotal * (1 + lucroDesejadoPct / 100);
   const lucro = precoPraticado - ficha.custoTotal;
   const margem = ficha.custoTotal > 0 ? (lucro / ficha.custoTotal) * 100 : 0;
-  const status = precoPraticado === sugerido ? "margem correta" : lucro < 0 ? "ajustar" : margem < 20 ? "margem curta" : "margem alta";
+  const status = isSamePrice(precoPraticado, sugerido) ? "margem correta" : lucro < 0 ? "ajustar" : margem < 20 ? "margem curta" : "margem alta";
   state.vendas.push({
     id: uid(), fichaId: ficha.id, produto: ficha.nome, custo: ficha.custoTotal,
     lucroDesejadoPct, precoSugerido: sugerido, precoPraticado, lucro, margemPct: margem, status,
@@ -264,7 +265,7 @@ function renderVendas() {
     const sugerido = f.custoTotal * (1 + ld / 100);
     const lucro = pp - f.custoTotal;
     const margem = f.custoTotal > 0 ? (lucro / f.custoTotal) * 100 : 0;
-    const status = pp === sugerido ? "margem correta" : lucro < 0 ? "ajustar" : margem < 20 ? "margem curta" : "margem alta";
+    const status = isSamePrice(pp, sugerido) ? "margem correta" : lucro < 0 ? "ajustar" : margem < 20 ? "margem curta" : "margem alta";
     state.vendas.push({ id: uid(), fichaId: f.id, produto: f.nome, custo: f.custoTotal, lucroDesejadoPct: ld, precoSugerido: sugerido, precoPraticado: pp, lucro, margemPct: margem, status });
     renderAll();
     e.target.reset();
