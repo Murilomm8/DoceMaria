@@ -1,4 +1,4 @@
-const STORAGE_KEY = "doceMariaDataV4";
+const STORAGE_KEY = "sistemaClienteMaria";
 const defaultData = { custos: [], ingredientes: [], fichas: [], vendas: [] };
 const tabs = [
   { id: "dashboard", label: "📊 Dashboard" },
@@ -8,7 +8,7 @@ const tabs = [
   { id: "vendas", label: "🛍️ Venda" },
 ];
 
-const state = loadData();
+const state = structuredClone(defaultData);
 
 function loadData() {
   try { return { ...defaultData, ...JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}") }; }
@@ -19,28 +19,6 @@ const BRL = (n) => Number(n || 0).toLocaleString("pt-BR", { style: "currency", c
 const uid = () => `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 const pct = (n) => `${Number(n || 0).toFixed(1)}%`;
 const isSamePrice = (a, b) => Math.abs(Number(a) - Number(b)) < 0.01;
-
-const demoData = {
-  custos: [
-    { id: uid(), descricao: "Aluguel", categoria: "fixo", valor: 1800 },
-    { id: uid(), descricao: "Energia elétrica", categoria: "fixo", valor: 420 },
-    { id: uid(), descricao: "Internet", categoria: "fixo", valor: 120 },
-    { id: uid(), descricao: "Taxa maquininha", categoria: "taxa", valor: 180 },
-  ],
-  ingredientes: [
-    { id: uid(), produto: "Farinha de trigo", unidade: "g", quantidade: 1000, valorCompra: 8.5, valorUnitario: 0.0085 },
-    { id: uid(), produto: "Açúcar", unidade: "g", quantidade: 1000, valorCompra: 6.5, valorUnitario: 0.0065 },
-    { id: uid(), produto: "Chocolate", unidade: "g", quantidade: 1000, valorCompra: 28, valorUnitario: 0.028 },
-    { id: uid(), produto: "Frango desfiado", unidade: "g", quantidade: 1000, valorCompra: 24, valorUnitario: 0.024 },
-    { id: uid(), produto: "Queijo", unidade: "g", quantidade: 1000, valorCompra: 32, valorUnitario: 0.032 },
-  ],
-  fichas: [],
-  vendas: [],
-};
-
-function bootstrapDemoDataIfEmpty() {
-  const isEmpty = !state.custos.length && !state.ingredientes.length && !state.fichas.length && !state.vendas.length;
-  if (!isEmpty) return;
 
   state.custos = demoData.custos;
   state.ingredientes = demoData.ingredientes;
