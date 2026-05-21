@@ -1,4 +1,4 @@
-const STORAGE_KEY = "sistemaClienteMaria";
+const STORAGE_KEY = "SistemaDoceMaria";
 const defaultData = { custos: [], ingredientes: [], fichas: [], vendas: [] };
 const tabs = [
   { id: "dashboard", label: "📊 Dashboard" },
@@ -8,7 +8,7 @@ const tabs = [
   { id: "vendas", label: "🛍️ Venda" },
 ];
 
-const state = structuredClone(defaultData);
+const state = loadData();
 
 function loadData() {
   try { return { ...defaultData, ...JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}") }; }
@@ -20,28 +20,6 @@ const uid = () => `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 const pct = (n) => `${Number(n || 0).toFixed(1)}%`;
 const isSamePrice = (a, b) => Math.abs(Number(a) - Number(b)) < 0.01;
 
-  state.custos = demoData.custos;
-  state.ingredientes = demoData.ingredientes;
-
-  const cup = { id: uid(), nome: "Cupcake de Chocolate", itens: [], custoTotal: 0 };
-  addItemFicha(cup, "Farinha de trigo", 120);
-  addItemFicha(cup, "Açúcar", 90);
-  addItemFicha(cup, "Chocolate", 140);
-
-  const cox = { id: uid(), nome: "Coxinha de Frango", itens: [], custoTotal: 0 };
-  addItemFicha(cox, "Farinha de trigo", 160);
-  addItemFicha(cox, "Frango desfiado", 180);
-
-  const esf = { id: uid(), nome: "Esfirra de Queijo", itens: [], custoTotal: 0 };
-  addItemFicha(esf, "Farinha de trigo", 130);
-  addItemFicha(esf, "Queijo", 120);
-
-  state.fichas = [cup, cox, esf];
-
-  addVendaDemo(cup, 80, 18);
-  addVendaDemo(cox, 65, 12);
-  addVendaDemo(esf, 70, 10);
-}
 
 function addItemFicha(ficha, nomeIngrediente, qtd) {
   const ing = state.ingredientes.find((x) => x.produto === nomeIngrediente);
@@ -60,8 +38,6 @@ function addVendaDemo(ficha, lucroDesejadoPct, precoPraticado) {
     lucroDesejadoPct, precoSugerido: sugerido, precoPraticado, lucro, margemPct: margem, status,
   });
 }
-
-bootstrapDemoDataIfEmpty();
 
 renderTabs();
 showTab("dashboard");
