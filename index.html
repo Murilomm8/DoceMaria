@@ -1,41 +1,87 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Doce Maria | Gestão Financeira</title>
-    <link rel="stylesheet" href="styles.css" />
-  </head>
-  <body>
-    <main class="layout">
-      <aside class="sidebar">
-        <div class="brand">
-          <div class="logo-slot"><img src="Texto do seu parágrafo.png" alt="Logo Doce Maria" id="logo-img" /></div>
-          <div>
-            <h1>Doce Maria</h1>
-            <p>Sistema Financeiro</p>
-          </div>
+<head>
+  <meta charset="UTF-8" />
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  />
+
+  <title>Doce Maria | Gestão Financeira</title>
+
+  <link
+    rel="stylesheet"
+    href="styles.css"
+  />
+</head>
+
+<body>
+
+  <main class="layout">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+
+      <div class="brand">
+
+        <div class="logo-slot">
+          <img
+            src="Texto do seu parágrafo.png"
+            alt="Logo Doce Maria"
+            id="logo-img"
+          />
         </div>
-        <nav class="tabs" id="tabs"></nav>
-      </aside>
 
-      <section class="content">
-      <section class="panel" id="dashboard-panel"></section>
-      <section class="panel hidden" id="custos-panel"></section>
-      <section class="panel hidden" id="ingredientes-panel"></section>
-      <section class="panel hidden" id="fichas-panel"></section>
-      <section class="panel hidden" id="vendas-panel"></section>
-      </section>
-    </main>
+        <div>
+          <h1>Doce Maria</h1>
+          <p>Sistema Financeiro</p>
+        </div>
 
-    <template id="card-template">
-      <article class="card">
-        <h3></h3>
-        <p class="value"></p>
-        <small></small>
-      </article>
-    </template>
+      </div>
 
-    <script src="app.js"></script>
-  </body>
+      <nav
+        class="tabs"
+        id="tabs"
+      ></nav>
+
+    </aside>
+
+
+    <!-- CONTEÚDO -->
+    <section class="content">
+
+      <section
+        class="panel"
+        id="dashboard-panel"
+      ></section>
+
+      <section
+        class="panel hidden"
+        id="custos-panel"
+      ></section>
+
+      <section
+        class="panel hidden"
+        id="ingredientes-panel"
+      ></section>
+
+      <section
+        class="panel hidden"
+        id="fichas-panel"
+      ></section>
+
+      <section
+        class="panel hidden"
+        id="vendas-panel"
+      ></section>
+
+    </section>
+
+  </main>
+
+
+  <script src="app.js"></script>
+
+</body>
 </html>

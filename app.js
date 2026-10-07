@@ -1,240 +1,3663 @@
 const STORAGE_KEY = "SistemaDoceMaria";
-const defaultData = { custos: [], ingredientes: [], fichas: [], vendas: [] };
+
+const defaultData = {
+  custos: [],
+  ingredientes: [],
+  fichas: [],
+  vendas: [],
+};
+
+
+/* =========================================================
+   MENU
+========================================================= */
+
 const tabs = [
-  { id: "dashboard", label: "📊 Dashboard" },
-  { id: "custos", label: "💸 Custos e Taxas" },
-  { id: "ingredientes", label: "🥛 Ingredientes" },
-  { id: "fichas", label: "🧾 Ficha Técnica" },
-  { id: "vendas", label: "🛍️ Venda" },
+  {
+    id: "dashboard",
+    label: "📊 Dashboard",
+  },
+
+  {
+    id: "custos",
+    label: "💸 Custos e Taxas",
+  },
+
+  {
+    id: "ingredientes",
+    label: "🥛 Ingredientes",
+  },
+
+  {
+    id: "fichas",
+    label: "🧾 Ficha Técnica",
+  },
+
+  {
+    id: "vendas",
+    label: "🛍️ Venda",
+  },
 ];
+
+
+/* =========================================================
+   ESTADO
+========================================================= */
 
 const state = loadData();
 
+
+/* =========================================================
+   LOCAL STORAGE
+========================================================= */
+
+function cloneDefaultData() {
+  return {
+    custos: [],
+    ingredientes: [],
+    fichas: [],
+    vendas: [],
+  };
+}
+
+
 function loadData() {
-  try { return { ...defaultData, ...JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}") }; }
-  catch { return structuredClone(defaultData); }
+  try {
+
+    const saved =
+      JSON.parse(
+        localStorage.getItem(
+          STORAGE_KEY
+        ) || "{}"
+      );
+
+
+    return {
+
+      custos:
+        Array.isArray(
+          saved.custos
+        )
+          ? saved.custos
+          : [],
+
+      ingredientes:
+        Array.isArray(
+          saved.ingredientes
+        )
+          ? saved.ingredientes
+          : [],
+
+      fichas:
+        Array.isArray(
+          saved.fichas
+        )
+          ? saved.fichas
+          : [],
+
+      vendas:
+        Array.isArray(
+          saved.vendas
+        )
+          ? saved.vendas
+          : [],
+
+    };
+
+  } catch (error) {
+
+    console.error(
+      "Erro ao carregar dados:",
+      error
+    );
+
+    return cloneDefaultData();
+  }
 }
-function saveData() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
-const BRL = (n) => Number(n || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-const uid = () => `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-const pct = (n) => `${Number(n || 0).toFixed(1)}%`;
-const isSamePrice = (a, b) => Math.abs(Number(a) - Number(b)) < 0.01;
 
 
-function addItemFicha(ficha, nomeIngrediente, qtd) {
-  const ing = state.ingredientes.find((x) => x.produto === nomeIngrediente);
-  if (!ing) return;
-  ficha.itens.push({ ingredienteId: ing.id, produto: ing.produto, unidade: ing.unidade, qtd, custo: qtd * ing.valorUnitario });
-  ficha.custoTotal = ficha.itens.reduce((a, it) => a + Number(it.custo), 0);
+function saveData() {
+
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify(state)
+  );
+
 }
 
-function addVendaDemo(ficha, lucroDesejadoPct, precoPraticado) {
-  const sugerido = ficha.custoTotal * (1 + lucroDesejadoPct / 100);
-  const lucro = precoPraticado - ficha.custoTotal;
-  const margem = ficha.custoTotal > 0 ? (lucro / ficha.custoTotal) * 100 : 0;
-  const status = calculateSaleStatus(precoPraticado, sugerido, lucro, margem);
-  state.vendas.push({
-    id: uid(), fichaId: ficha.id, produto: ficha.nome, custo: ficha.custoTotal,
-    lucroDesejadoPct, precoSugerido: sugerido, precoPraticado, lucro, margemPct: margem, status,
-  });
+
+/* =========================================================
+   UTILITÁRIOS
+========================================================= */
+
+const BRL = (number) =>
+  Number(
+    number || 0
+  ).toLocaleString(
+    "pt-BR",
+    {
+      style: "currency",
+      currency: "BRL",
+    }
+  );
+
+
+const uid = () =>
+  `${Date.now()}_${Math.random()
+    .toString(36)
+    .slice(2, 7)}`;
+
+
+const pct = (number) =>
+  `${Number(
+    number || 0
+  ).toFixed(1)}%`;
+
+
+const isSamePrice = (
+  a,
+  b
+) =>
+  Math.abs(
+    Number(a) -
+    Number(b)
+  ) < 0.01;
+
+
+function escapeHTML(value) {
+
+  return String(
+    value ?? ""
+  )
+    .replaceAll(
+      "&",
+      "&amp;"
+    )
+    .replaceAll(
+      "<",
+      "&lt;"
+    )
+    .replaceAll(
+      ">",
+      "&gt;"
+    )
+    .replaceAll(
+      '"',
+      "&quot;"
+    )
+    .replaceAll(
+      "'",
+      "&#039;"
+    );
+
 }
 
-renderTabs();
-showTab("dashboard");
-renderAll();
+
+/* =========================================================
+   BUSCAS
+========================================================= */
+
+function getIngredient(id) {
+
+  return state.ingredientes.find(
+    (ingredient) =>
+      ingredient.id === id
+  );
+
+}
+
+
+function getFicha(id) {
+
+  return state.fichas.find(
+    (ficha) =>
+      ficha.id === id
+  );
+
+}
+
+
+/* =========================================================
+   RECÁLCULOS
+========================================================= */
+
+function recalculateFicha(
+  ficha
+) {
+
+  if (!ficha) return;
+
+
+  ficha.itens =
+    Array.isArray(
+      ficha.itens
+    )
+      ? ficha.itens
+      : [];
+
+
+  ficha.itens =
+    ficha.itens
+      .map(
+        (item) => {
+
+          const ingredient =
+            getIngredient(
+              item.ingredienteId
+            );
+
+
+          if (!ingredient) {
+            return null;
+          }
+
+
+          const quantidade =
+            Number(
+              item.qtd || 0
+            );
+
+
+          return {
+
+            ...item,
+
+            produto:
+              ingredient.produto,
+
+            unidade:
+              ingredient.unidade,
+
+            qtd:
+              quantidade,
+
+            custo:
+              quantidade *
+              Number(
+                ingredient.valorUnitario ||
+                  0
+              ),
+
+          };
+
+        }
+      )
+      .filter(Boolean);
+
+
+  ficha.custoTotal =
+    ficha.itens.reduce(
+      (
+        total,
+        item
+      ) =>
+        total +
+        Number(
+          item.custo || 0
+        ),
+      0
+    );
+
+}
+
+
+function recalculateAllFichas() {
+
+  state.fichas.forEach(
+    (ficha) => {
+      recalculateFicha(
+        ficha
+      );
+    }
+  );
+
+}
+
+
+function syncSalesForFicha(
+  fichaId
+) {
+
+  const ficha =
+    getFicha(
+      fichaId
+    );
+
+
+  if (!ficha) return;
+
+
+  state.vendas.forEach(
+    (sale) => {
+
+      if (
+        sale.fichaId !==
+        fichaId
+      ) {
+        return;
+      }
+
+
+      const lucroDesejadoPct =
+        Number(
+          sale.lucroDesejadoPct ||
+            0
+        );
+
+
+      const precoPraticado =
+        Number(
+          sale.precoPraticado ||
+            0
+        );
+
+
+      const precoSugerido =
+        ficha.custoTotal *
+        (
+          1 +
+          lucroDesejadoPct /
+            100
+        );
+
+
+      const lucro =
+        precoPraticado -
+        ficha.custoTotal;
+
+
+      const margemPct =
+        ficha.custoTotal >
+        0
+          ? (
+              lucro /
+              ficha.custoTotal
+            ) * 100
+          : 0;
+
+
+      sale.produto =
+        ficha.nome;
+
+      sale.custo =
+        ficha.custoTotal;
+
+      sale.precoSugerido =
+        precoSugerido;
+
+      sale.lucro =
+        lucro;
+
+      sale.margemPct =
+        margemPct;
+
+      sale.status =
+        calculateSaleStatus(
+          precoPraticado,
+          precoSugerido,
+          lucro,
+          margemPct
+        );
+
+    }
+  );
+
+}
+
+
+function syncAllSales() {
+
+  recalculateAllFichas();
+
+  state.fichas.forEach(
+    (ficha) => {
+
+      syncSalesForFicha(
+        ficha.id
+      );
+
+    }
+  );
+
+}
+
+
+function calculateSaleValues(
+  ficha,
+  lucroDesejadoPct,
+  precoPraticado
+) {
+
+  const custo =
+    Number(
+      ficha?.custoTotal ||
+        0
+    );
+
+
+  const lucroDesejado =
+    Number(
+      lucroDesejadoPct ||
+        0
+    );
+
+
+  const praticado =
+    Number(
+      precoPraticado ||
+        0
+    );
+
+
+  const precoSugerido =
+    custo *
+    (
+      1 +
+      lucroDesejado /
+        100
+    );
+
+
+  const lucro =
+    praticado -
+    custo;
+
+
+  const margemPct =
+    custo > 0
+      ? (
+          lucro /
+          custo
+        ) * 100
+      : 0;
+
+
+  return {
+
+    custo,
+
+    lucroDesejadoPct:
+      lucroDesejado,
+
+    precoSugerido,
+
+    precoPraticado:
+      praticado,
+
+    lucro,
+
+    margemPct,
+
+    status:
+      calculateSaleStatus(
+        praticado,
+        precoSugerido,
+        lucro,
+        margemPct
+      ),
+
+  };
+
+}
+
+
+/* =========================================================
+   NAVEGAÇÃO
+========================================================= */
 
 function renderTabs() {
 
-  const container = document.getElementById("tabs");
-  container.innerHTML = tabs.map((t) => `<button class="tab-btn" data-tab="${t.id}">${t.label}</button>`).join("");
-  container.addEventListener("click", (e) => {
-    const b = e.target.closest("button[data-tab]");
-    if (b) showTab(b.dataset.tab);
-  });
+  const container =
+    document.getElementById(
+      "tabs"
+    );
+
+
+  if (!container) return;
+
+
+  container.innerHTML =
+    tabs
+      .map(
+        (tab) =>
+          `
+            <button
+              class="tab-btn"
+              data-tab="${tab.id}"
+            >
+              ${tab.label}
+            </button>
+          `
+      )
+      .join("");
+
+
+  container.onclick =
+    (event) => {
+
+      const button =
+        event.target.closest(
+          "button[data-tab]"
+        );
+
+
+      if (button) {
+
+        showTab(
+          button.dataset.tab
+        );
+
+      }
+
+    };
+
 }
+
+
 function showTab(id) {
-  tabs.forEach((t) => {
-    document.querySelector(`#${t.id}-panel`).classList.toggle("hidden", t.id !== id);
-    document.querySelector(`[data-tab="${t.id}"]`)?.classList.toggle("active", t.id === id);
-  });
+
+  tabs.forEach(
+    (tab) => {
+
+      const panel =
+        document.querySelector(
+          `#${tab.id}-panel`
+        );
+
+
+      const button =
+        document.querySelector(
+          `[data-tab="${tab.id}"]`
+        );
+
+
+      panel?.classList.toggle(
+        "hidden",
+        tab.id !== id
+      );
+
+
+      button?.classList.toggle(
+        "active",
+        tab.id === id
+      );
+
+    }
+  );
+
 }
+
+
+/* =========================================================
+   RENDER GERAL
+========================================================= */
 
 function renderAll() {
+
+  syncAllSales();
+
   renderDashboard();
+
   renderCustos();
+
   renderIngredientes();
+
   renderFichas();
+
   renderVendas();
+
   saveData();
+
 }
+
+
+/* =========================================================
+   DASHBOARD
+========================================================= */
 
 function renderDashboard() {
-  const p = document.getElementById("dashboard-panel");
-  const fixos = state.custos.reduce((a, c) => a + Number(c.valor), 0);
-  const custoFichas = state.fichas.reduce((a, f) => a + Number(f.custoTotal || 0), 0);
-  const receita = state.vendas.reduce((a, v) => a + Number(v.precoPraticado || 0), 0);
-  const lucroTotal = state.vendas.reduce((a, v) => a + Number(v.lucro || 0), 0);
-  const margemMedia = state.vendas.length ? state.vendas.reduce((a, v) => a + Number(v.margemPct || 0), 0) / state.vendas.length : 0;
 
-  p.innerHTML = `
-    <h2>Dashboard Profissional</h2>
+  const panel =
+    document.getElementById(
+      "dashboard-panel"
+    );
+
+
+  if (!panel) return;
+
+
+  const custosTotal =
+    state.custos.reduce(
+      (
+        total,
+        cost
+      ) =>
+        total +
+        Number(
+          cost.valor || 0
+        ),
+      0
+    );
+
+
+  const custoFichas =
+    state.fichas.reduce(
+      (
+        total,
+        ficha
+      ) =>
+        total +
+        Number(
+          ficha.custoTotal ||
+            0
+        ),
+      0
+    );
+
+
+  const receita =
+    state.vendas.reduce(
+      (
+        total,
+        sale
+      ) =>
+        total +
+        Number(
+          sale.precoPraticado ||
+            0
+        ),
+      0
+    );
+
+
+  const lucroTotal =
+    state.vendas.reduce(
+      (
+        total,
+        sale
+      ) =>
+        total +
+        Number(
+          sale.lucro ||
+            0
+        ),
+      0
+    );
+
+
+  const margemMedia =
+    state.vendas.length
+      ? state.vendas.reduce(
+          (
+            total,
+            sale
+          ) =>
+            total +
+            Number(
+              sale.margemPct ||
+                0
+            ),
+          0
+        ) /
+        state.vendas.length
+      : 0;
+
+
+  panel.innerHTML = `
+
+    <h2>
+      Dashboard Profissional
+    </h2>
+
+
     <div class="grid">
-      ${card("Receita total", BRL(receita), "Soma dos preços praticados")}
-      ${card("Custos fixos", BRL(fixos), "Soma dos custos e taxas")}
-      ${card("Lucro total", BRL(lucroTotal), "Resultado das vendas")}
-      ${card("Margem média", pct(margemMedia), "Média da margem por produto")}
+
+      ${card(
+        "Receita total",
+        BRL(receita),
+        "Soma dos preços praticados"
+      )}
+
+      ${card(
+        "Custos e taxas",
+        BRL(custosTotal),
+        "Soma dos custos cadastrados"
+      )}
+
+      ${card(
+        "Lucro total",
+        BRL(lucroTotal),
+        "Resultado das vendas"
+      )}
+
+      ${card(
+        "Margem média",
+        pct(margemMedia),
+        "Média da margem por produto"
+      )}
+
     </div>
-    <h3>Gráficos e percentuais</h3>
+
+
+    <h3>
+      Gráficos e percentuais
+    </h3>
+
+
     <div class="chart-box">
-      ${progress("Custos fixos sobre receita", receita > 0 ? (fixos / receita) * 100 : 0, "warn")}
-      ${progress("Lucro sobre receita", receita > 0 ? (lucroTotal / receita) * 100 : 0, "ok")}
-      ${progress("Margem média dos produtos", margemMedia, "high")}
+
+      ${progress(
+        "Custos sobre receita",
+        receita > 0
+          ? (
+              custosTotal /
+              receita
+            ) * 100
+          : 0,
+        "warn"
+      )}
+
+
+      ${progress(
+        "Lucro sobre receita",
+        receita > 0
+          ? (
+              lucroTotal /
+              receita
+            ) * 100
+          : 0,
+        "ok"
+      )}
+
+
+      ${progress(
+        "Margem média dos produtos",
+        margemMedia,
+        "high"
+      )}
+
     </div>
-    <h3>Resumo operacional</h3>
+
+
+    <h3>
+      Resumo operacional
+    </h3>
+
+
     <ul>
-      <li>Custos cadastrados: <b>${state.custos.length}</b></li>
-      <li>Ingredientes cadastrados: <b>${state.ingredientes.length}</b></li>
-      <li>Fichas técnicas cadastradas: <b>${state.fichas.length}</b></li>
-      <li>Produtos em venda cadastrados: <b>${state.vendas.length}</b></li>
-      <li>Custo total das fichas: <b>${BRL(custoFichas)}</b></li>
-    </ul>`;
-}
-function card(t, v, s) { return `<article class="card"><h3>${t}</h3><p class="value">${v}</p><small>${s}</small></article>`; }
-function calculateSaleStatus(precoPraticado, precoSugerido, lucro, margem) {
-  if (isSamePrice(precoPraticado, precoSugerido)) return "margem correta";
-  if (Number(lucro) < 0) return "ajustar";
-  return Number(margem) < 20 ? "margem curta" : "margem alta";
+
+      <li>
+        Custos cadastrados:
+        <b>
+          ${state.custos.length}
+        </b>
+      </li>
+
+      <li>
+        Ingredientes cadastrados:
+        <b>
+          ${state.ingredientes.length}
+        </b>
+      </li>
+
+      <li>
+        Fichas técnicas cadastradas:
+        <b>
+          ${state.fichas.length}
+        </b>
+      </li>
+
+      <li>
+        Produtos em venda cadastrados:
+        <b>
+          ${state.vendas.length}
+        </b>
+      </li>
+
+      <li>
+        Custo total das fichas:
+        <b>
+          ${BRL(custoFichas)}
+        </b>
+      </li>
+
+    </ul>
+
+  `;
+
 }
 
-function progress(label, value, tone) {
-  const val = Math.max(0, Math.min(100, Number(value || 0)));
-  return `<div class="metric"><div class="metric-head"><span>${label}</span><b>${pct(val)}</b></div><div class="bar"><span class="fill ${tone}" style="width:${val}%"></span></div></div>`;
+
+function card(
+  title,
+  value,
+  subtitle
+) {
+
+  return `
+
+    <article class="card">
+
+      <h3>
+        ${escapeHTML(title)}
+      </h3>
+
+      <p class="value">
+        ${value}
+      </p>
+
+      <small>
+        ${escapeHTML(subtitle)}
+      </small>
+
+    </article>
+
+  `;
+
 }
+
+
+/* =========================================================
+   STATUS
+========================================================= */
+
+function calculateSaleStatus(
+  precoPraticado,
+  precoSugerido,
+  lucro,
+  margem
+) {
+
+  if (
+    isSamePrice(
+      precoPraticado,
+      precoSugerido
+    )
+  ) {
+
+    return "margem correta";
+
+  }
+
+
+  if (
+    Number(lucro) < 0
+  ) {
+
+    return "ajustar";
+
+  }
+
+
+  return Number(margem) < 20
+    ? "margem curta"
+    : "margem alta";
+
+}
+
+
+function statusBadge(
+  status
+) {
+
+  const cls =
+    status ===
+    "margem alta"
+
+      ? "high"
+
+      : status ===
+        "ajustar"
+
+      ? "warn"
+
+      : "ok";
+
+
+  return `
+
+    <span
+      class="badge ${cls}"
+    >
+      ${escapeHTML(status)}
+    </span>
+
+  `;
+
+}
+
+
+function progress(
+  label,
+  value,
+  tone
+) {
+
+  const val =
+    Math.max(
+      0,
+      Math.min(
+        100,
+        Number(
+          value || 0
+        )
+      )
+    );
+
+
+  return `
+
+    <div class="metric">
+
+      <div class="metric-head">
+
+        <span>
+          ${escapeHTML(label)}
+        </span>
+
+        <b>
+          ${pct(val)}
+        </b>
+
+      </div>
+
+
+      <div class="bar">
+
+        <span
+          class="fill ${tone}"
+          style="width:${val}%"
+        ></span>
+
+      </div>
+
+    </div>
+
+  `;
+
+}
+
+
+/* =========================================================
+   CUSTOS
+========================================================= */
 
 function renderCustos() {
-  const p = document.getElementById("custos-panel");
-  p.innerHTML = `
-    <h2>Custos e Taxas</h2>
-    <button class="toggle-btn" id="btn-cadastro-custo">+ Cadastrar Custo</button>
-    <form id="f-custos">
-      <input required name="descricao" placeholder="Descrição (Ex.: Aluguel)" />
-      <input required name="categoria" placeholder="Categoria (fixo/taxa/imposto)" />
-      <input required type="number" min="0" step="0.01" name="valor" placeholder="Valor" />
-      <button type="submit">Salvar cadastro</button>
+
+  const panel =
+    document.getElementById(
+      "custos-panel"
+    );
+
+
+  if (!panel) return;
+
+
+  panel.innerHTML = `
+
+    <h2>
+      Custos e Taxas
+    </h2>
+
+
+    <button
+      class="toggle-btn"
+      id="btn-cadastro-custo"
+    >
+      + Cadastrar Custo
+    </button>
+
+
+    <form
+      id="f-custos"
+    >
+
+      <input
+        required
+        name="descricao"
+        placeholder="Descrição (Ex.: Aluguel)"
+      />
+
+
+      <input
+        required
+        name="categoria"
+        placeholder="Categoria (fixo/taxa/imposto)"
+      />
+
+
+      <input
+        required
+        type="number"
+        min="0"
+        step="0.01"
+        name="valor"
+        placeholder="Valor"
+      />
+
+
+      <button type="submit">
+        Salvar cadastro
+      </button>
+
     </form>
-    <table><thead><tr><th>Descrição</th><th>Categoria</th><th>Valor</th><th>Ações</th></tr></thead>
-    <tbody>${state.custos.map((c) => `<tr><td>${c.descricao}</td><td>${c.categoria}</td><td>${BRL(c.valor)}</td><td><button class="secondary" data-del-custo="${c.id}">Excluir</button></td></tr>`).join("") || `<tr><td colspan="4">Sem cadastros ainda.</td></tr>`}</tbody></table>`;
-  p.querySelector("#btn-cadastro-custo").onclick = () => p.querySelector("#f-custos").scrollIntoView({ behavior: "smooth" });
-  p.querySelector("#f-custos").onsubmit = (e) => {
-    e.preventDefault();
-    const fd = new FormData(e.target);
-    state.custos.push({ id: uid(), descricao: fd.get("descricao"), categoria: fd.get("categoria"), valor: Number(fd.get("valor")) });
-    renderAll();
-    e.target.reset();
-  };
-  p.querySelectorAll("[data-del-custo]").forEach((b) => b.onclick = () => { state.custos = state.custos.filter((c) => c.id !== b.dataset.delCusto); renderAll(); });
+
+
+    <table>
+
+      <thead>
+
+        <tr>
+
+          <th>
+            Descrição
+          </th>
+
+          <th>
+            Categoria
+          </th>
+
+          <th>
+            Valor
+          </th>
+
+          <th>
+            Ações
+          </th>
+
+        </tr>
+
+      </thead>
+
+
+      <tbody>
+
+        ${
+          state.custos
+            .map(
+              (cost) => `
+
+                <tr>
+
+                  <td>
+                    ${escapeHTML(
+                      cost.descricao
+                    )}
+                  </td>
+
+                  <td>
+                    ${escapeHTML(
+                      cost.categoria
+                    )}
+                  </td>
+
+                  <td>
+                    ${BRL(
+                      cost.valor
+                    )}
+                  </td>
+
+                  <td>
+
+                    <div
+                      class="actions-row"
+                    >
+
+                      <button
+                        class="secondary"
+                        data-edit-custo="${cost.id}"
+                      >
+                        ✏️ Editar
+                      </button>
+
+
+                      <button
+                        class="secondary"
+                        data-del-custo="${cost.id}"
+                      >
+                        🗑️ Excluir
+                      </button>
+
+                    </div>
+
+                  </td>
+
+                </tr>
+
+              `
+            )
+            .join("")
+
+          ||
+
+          `
+
+            <tr>
+
+              <td colspan="4">
+                Sem cadastros ainda.
+              </td>
+
+            </tr>
+
+          `
+        }
+
+      </tbody>
+
+    </table>
+
+  `;
+
+
+  panel.querySelector(
+    "#btn-cadastro-custo"
+  ).onclick =
+    () => {
+
+      panel
+        .querySelector(
+          "#f-custos"
+        )
+        .scrollIntoView({
+          behavior: "smooth",
+        });
+
+    };
+
+
+  panel.querySelector(
+    "#f-custos"
+  ).onsubmit =
+    (event) => {
+
+      event.preventDefault();
+
+
+      const formData =
+        new FormData(
+          event.target
+        );
+
+
+      state.custos.push({
+
+        id: uid(),
+
+        descricao:
+          String(
+            formData.get(
+              "descricao"
+            ) || ""
+          ).trim(),
+
+        categoria:
+          String(
+            formData.get(
+              "categoria"
+            ) || ""
+          ).trim(),
+
+        valor:
+          Number(
+            formData.get(
+              "valor"
+            )
+          ),
+
+      });
+
+
+      event.target.reset();
+
+      renderAll();
+
+    };
+
+
+  panel
+    .querySelectorAll(
+      "[data-edit-custo]"
+    )
+    .forEach(
+      (button) => {
+
+        button.onclick =
+          () => {
+
+            editCusto(
+              button.dataset
+                .editCusto
+            );
+
+          };
+
+      }
+    );
+
+
+  panel
+    .querySelectorAll(
+      "[data-del-custo]"
+    )
+    .forEach(
+      (button) => {
+
+        button.onclick =
+          () => {
+
+            state.custos =
+              state.custos.filter(
+                (cost) =>
+                  cost.id !==
+                  button.dataset
+                    .delCusto
+              );
+
+            renderAll();
+
+          };
+
+      }
+    );
+
 }
+
+
+/* =========================================================
+   INGREDIENTES
+========================================================= */
 
 function renderIngredientes() {
-  const p = document.getElementById("ingredientes-panel");
-  p.innerHTML = `
-    <h2>Ingredientes</h2>
-    <button class="toggle-btn" id="btn-cadastro-ing">+ Cadastrar Ingrediente</button>
-    <form id="f-ing">
-      <input required name="produto" placeholder="Produto" />
-      <input required name="unidade" placeholder="Unidade (ml, g, kg, un)" />
-      <input required type="number" min="0.01" step="0.01" name="quantidade" placeholder="Quantidade de compra" />
-      <input required type="number" min="0" step="0.01" name="valor" placeholder="Valor da compra" />
-      <button type="submit">Salvar cadastro</button>
+
+  const panel =
+    document.getElementById(
+      "ingredientes-panel"
+    );
+
+
+  if (!panel) return;
+
+
+  panel.innerHTML = `
+
+    <h2>
+      Ingredientes
+    </h2>
+
+
+    <button
+      class="toggle-btn"
+      id="btn-cadastro-ing"
+    >
+      + Cadastrar Ingrediente
+    </button>
+
+
+    <form
+      id="f-ing"
+    >
+
+      <input
+        required
+        name="produto"
+        placeholder="Produto"
+      />
+
+
+      <input
+        required
+        name="unidade"
+        placeholder="Unidade (ml, g, kg, un)"
+      />
+
+
+      <input
+        required
+        type="number"
+        min="0.01"
+        step="0.01"
+        name="quantidade"
+        placeholder="Quantidade de compra"
+      />
+
+
+      <input
+        required
+        type="number"
+        min="0"
+        step="0.01"
+        name="valor"
+        placeholder="Valor da compra"
+      />
+
+
+      <button type="submit">
+        Salvar cadastro
+      </button>
+
     </form>
-    <table><thead><tr><th>Produto</th><th>Unidade</th><th>Qtd</th><th>Valor compra</th><th>Valor unitário</th><th>Ações</th></tr></thead>
-    <tbody>${state.ingredientes.map((i) => `<tr><td>${i.produto}</td><td>${i.unidade}</td><td>${i.quantidade}</td><td>${BRL(i.valorCompra)}</td><td>${BRL(i.valorUnitario)}</td><td><button class="secondary" data-del-ing="${i.id}">Excluir</button></td></tr>`).join("") || `<tr><td colspan="6">Sem cadastros ainda.</td></tr>`}</tbody></table>`;
-  p.querySelector("#btn-cadastro-ing").onclick = () => p.querySelector("#f-ing").scrollIntoView({ behavior: "smooth" });
-  p.querySelector("#f-ing").onsubmit = (e) => {
-    e.preventDefault();
-    const fd = new FormData(e.target);
-    const q = Number(fd.get("quantidade"));
-    const v = Number(fd.get("valor"));
-    state.ingredientes.push({ id: uid(), produto: fd.get("produto"), unidade: fd.get("unidade"), quantidade: q, valorCompra: v, valorUnitario: v / q });
-    renderAll();
-    e.target.reset();
-  };
-  p.querySelectorAll("[data-del-ing]").forEach((b) => b.onclick = () => { state.ingredientes = state.ingredientes.filter((i) => i.id !== b.dataset.delIng); renderAll(); });
+
+
+    <table>
+
+      <thead>
+
+        <tr>
+
+          <th>
+            Produto
+          </th>
+
+          <th>
+            Unidade
+          </th>
+
+          <th>
+            Qtd
+          </th>
+
+          <th>
+            Valor compra
+          </th>
+
+          <th>
+            Valor unitário
+          </th>
+
+          <th>
+            Ações
+          </th>
+
+        </tr>
+
+      </thead>
+
+
+      <tbody>
+
+        ${
+          state.ingredientes
+            .map(
+              (ingredient) => `
+
+                <tr>
+
+                  <td>
+                    ${escapeHTML(
+                      ingredient.produto
+                    )}
+                  </td>
+
+                  <td>
+                    ${escapeHTML(
+                      ingredient.unidade
+                    )}
+                  </td>
+
+                  <td>
+                    ${Number(
+                      ingredient.quantidade ||
+                        0
+                    )}
+                  </td>
+
+                  <td>
+                    ${BRL(
+                      ingredient.valorCompra
+                    )}
+                  </td>
+
+                  <td>
+                    ${BRL(
+                      ingredient.valorUnitario
+                    )}
+                  </td>
+
+                  <td>
+
+                    <div
+                      class="actions-row"
+                    >
+
+                      <button
+                        class="secondary"
+                        data-edit-ing="${ingredient.id}"
+                      >
+                        ✏️ Editar
+                      </button>
+
+
+                      <button
+                        class="secondary"
+                        data-del-ing="${ingredient.id}"
+                      >
+                        🗑️ Excluir
+                      </button>
+
+                    </div>
+
+                  </td>
+
+                </tr>
+
+              `
+            )
+            .join("")
+
+          ||
+
+          `
+
+            <tr>
+
+              <td colspan="6">
+                Sem cadastros ainda.
+              </td>
+
+            </tr>
+
+          `
+        }
+
+      </tbody>
+
+    </table>
+
+  `;
+
+
+  panel.querySelector(
+    "#btn-cadastro-ing"
+  ).onclick =
+    () => {
+
+      panel
+        .querySelector(
+          "#f-ing"
+        )
+        .scrollIntoView({
+          behavior: "smooth",
+        });
+
+    };
+
+
+  panel.querySelector(
+    "#f-ing"
+  ).onsubmit =
+    (event) => {
+
+      event.preventDefault();
+
+
+      const formData =
+        new FormData(
+          event.target
+        );
+
+
+      const quantidade =
+        Number(
+          formData.get(
+            "quantidade"
+          )
+        );
+
+
+      const valorCompra =
+        Number(
+          formData.get(
+            "valor"
+          )
+        );
+
+
+      if (
+        quantidade <= 0
+      ) {
+
+        alert(
+          "A quantidade de compra deve ser maior que zero."
+        );
+
+        return;
+
+      }
+
+
+      state.ingredientes.push({
+
+        id: uid(),
+
+        produto:
+          String(
+            formData.get(
+              "produto"
+            ) || ""
+          ).trim(),
+
+        unidade:
+          String(
+            formData.get(
+              "unidade"
+            ) || ""
+          ).trim(),
+
+        quantidade,
+
+        valorCompra,
+
+        valorUnitario:
+          valorCompra /
+          quantidade,
+
+      });
+
+
+      event.target.reset();
+
+      renderAll();
+
+    };
+
+
+  panel
+    .querySelectorAll(
+      "[data-edit-ing]"
+    )
+    .forEach(
+      (button) => {
+
+        button.onclick =
+          () => {
+
+            editIngrediente(
+              button.dataset
+                .editIng
+            );
+
+          };
+
+      }
+    );
+
+
+  panel
+    .querySelectorAll(
+      "[data-del-ing]"
+    )
+    .forEach(
+      (button) => {
+
+        button.onclick =
+          () => {
+
+            deleteIngrediente(
+              button.dataset
+                .delIng
+            );
+
+          };
+
+      }
+    );
+
 }
+
+
+/* =========================================================
+   FICHAS
+========================================================= */
 
 function renderFichas() {
-  const p = document.getElementById("fichas-panel");
-  p.innerHTML = `
-    <h2>Ficha Técnica</h2>
-    <button class="toggle-btn" id="btn-cadastro-ficha">+ Cadastrar Produto Final</button>
-    <form id="f-ficha-produto"><input required name="nome" placeholder="Produto final" /><button type="submit">Criar ficha</button></form>
-    <button class="toggle-btn" id="btn-cadastro-item">+ Cadastrar Ingrediente na Ficha</button>
-    <form id="f-ficha-item">
-      <select required name="fichaId"><option value="">Selecione a ficha</option>${state.fichas.map((f) => `<option value="${f.id}">${f.nome}</option>`).join("")}</select>
-      <select required name="ingredienteId"><option value="">Selecione o ingrediente</option>${state.ingredientes.map((i) => `<option value="${i.id}">${i.produto} (${i.unidade})</option>`).join("")}</select>
-      <input required type="number" min="0.01" step="0.01" name="quantidadeUso" placeholder="Quantidade usada" />
-      <button type="submit">Adicionar ingrediente</button>
+
+  const panel =
+    document.getElementById(
+      "fichas-panel"
+    );
+
+
+  if (!panel) return;
+
+
+  panel.innerHTML = `
+
+    <h2>
+      Ficha Técnica
+    </h2>
+
+
+    <button
+      class="toggle-btn"
+      id="btn-cadastro-ficha"
+    >
+      + Cadastrar Produto Final
+    </button>
+
+
+    <form
+      id="f-ficha-produto"
+    >
+
+      <input
+        required
+        name="nome"
+        placeholder="Produto final"
+      />
+
+
+      <button type="submit">
+        Criar ficha
+      </button>
+
     </form>
-    <table><thead><tr><th>Produto final</th><th>Ingredientes</th><th>Custo total</th><th>Ações</th></tr></thead>
-    <tbody>${state.fichas.map((f) => `<tr><td>${f.nome}</td><td>${f.itens.length ? `<div class="list-inline">${f.itens.map((i) => `<span class="pill">${i.produto}: ${i.qtd}${i.unidade}</span>`).join("")}</div>` : "Sem itens"}</td><td>${BRL(f.custoTotal)}</td><td><button class="secondary" data-del-ficha="${f.id}">Excluir</button></td></tr>`).join("") || `<tr><td colspan="4">Sem fichas cadastradas.</td></tr>`}</tbody></table>`;
-  p.querySelector("#btn-cadastro-ficha").onclick = () => p.querySelector("#f-ficha-produto").scrollIntoView({ behavior: "smooth" });
-  p.querySelector("#btn-cadastro-item").onclick = () => p.querySelector("#f-ficha-item").scrollIntoView({ behavior: "smooth" });
-  p.querySelector("#f-ficha-produto").onsubmit = (e) => {
-    e.preventDefault();
-    const fd = new FormData(e.target);
-    state.fichas.push({ id: uid(), nome: fd.get("nome"), itens: [], custoTotal: 0 });
-    renderAll();
-    e.target.reset();
-  };
-  p.querySelector("#f-ficha-item").onsubmit = (e) => {
-    e.preventDefault();
-    const fd = new FormData(e.target);
-    const f = state.fichas.find((x) => x.id === fd.get("fichaId"));
-    const ing = state.ingredientes.find((x) => x.id === fd.get("ingredienteId"));
-    if (!f || !ing) return alert("Selecione ficha e ingrediente válidos.");
-    const qtd = Number(fd.get("quantidadeUso"));
-    f.itens.push({ ingredienteId: ing.id, produto: ing.produto, unidade: ing.unidade, qtd, custo: qtd * ing.valorUnitario });
-    f.custoTotal = f.itens.reduce((a, it) => a + Number(it.custo), 0);
-    renderAll();
-    e.target.reset();
-  };
-  p.querySelectorAll("[data-del-ficha]").forEach((b) => b.onclick = () => { state.fichas = state.fichas.filter((f) => f.id !== b.dataset.delFicha); state.vendas = state.vendas.filter((v) => v.fichaId !== b.dataset.delFicha); renderAll(); });
+
+
+    <button
+      class="toggle-btn"
+      id="btn-cadastro-item"
+    >
+      + Cadastrar Ingrediente na Ficha
+    </button>
+
+
+    <form
+      id="f-ficha-item"
+    >
+
+      <select
+        required
+        name="fichaId"
+      >
+
+        <option value="">
+          Selecione a ficha
+        </option>
+
+
+        ${state.fichas
+          .map(
+            (ficha) => `
+
+              <option
+                value="${ficha.id}"
+              >
+                ${escapeHTML(
+                  ficha.nome
+                )}
+              </option>
+
+            `
+          )
+          .join("")}
+
+      </select>
+
+
+      <select
+        required
+        name="ingredienteId"
+      >
+
+        <option value="">
+          Selecione o ingrediente
+        </option>
+
+
+        ${state.ingredientes
+          .map(
+            (ingredient) => `
+
+              <option
+                value="${ingredient.id}"
+              >
+                ${escapeHTML(
+                  ingredient.produto
+                )}
+                (${escapeHTML(
+                  ingredient.unidade
+                )})
+              </option>
+
+            `
+          )
+          .join("")}
+
+      </select>
+
+
+      <input
+        required
+        type="number"
+        min="0.01"
+        step="0.01"
+        name="quantidadeUso"
+        placeholder="Quantidade usada"
+      />
+
+
+      <button type="submit">
+        Adicionar ingrediente
+      </button>
+
+    </form>
+
+
+    <table>
+
+      <thead>
+
+        <tr>
+
+          <th>
+            Produto final
+          </th>
+
+          <th>
+            Ingredientes
+          </th>
+
+          <th>
+            Custo total
+          </th>
+
+          <th>
+            Ações
+          </th>
+
+        </tr>
+
+      </thead>
+
+
+      <tbody>
+
+        ${
+          state.fichas
+            .map(
+              (ficha) => `
+
+                <tr>
+
+                  <td>
+                    ${escapeHTML(
+                      ficha.nome
+                    )}
+                  </td>
+
+
+                  <td>
+
+                    ${
+                      ficha.itens?.length
+
+                        ? `
+
+                          <div
+                            class="list-inline"
+                          >
+
+                            ${ficha.itens
+                              .map(
+                                (item) => `
+
+                                  <span
+                                    class="pill"
+                                  >
+
+                                    ${escapeHTML(
+                                      item.produto
+                                    )}:
+
+                                    ${Number(
+                                      item.qtd ||
+                                        0
+                                    )}
+
+                                    ${escapeHTML(
+                                      item.unidade
+                                    )}
+
+                                  </span>
+
+                                `
+                              )
+                              .join("")}
+
+                          </div>
+
+                        `
+
+                        : "Sem itens"
+                    }
+
+                  </td>
+
+
+                  <td>
+                    ${BRL(
+                      ficha.custoTotal
+                    )}
+                  </td>
+
+
+                  <td>
+
+                    <div
+                      class="actions-row"
+                    >
+
+                      <button
+                        class="secondary"
+                        data-edit-ficha="${ficha.id}"
+                      >
+                        ✏️ Editar
+                      </button>
+
+
+                      <button
+                        class="secondary"
+                        data-del-ficha="${ficha.id}"
+                      >
+                        🗑️ Excluir
+                      </button>
+
+                    </div>
+
+                  </td>
+
+                </tr>
+
+              `
+            )
+            .join("")
+
+          ||
+
+          `
+
+            <tr>
+
+              <td colspan="4">
+                Sem fichas cadastradas.
+              </td>
+
+            </tr>
+
+          `
+        }
+
+      </tbody>
+
+    </table>
+
+  `;
+
+
+  panel.querySelector(
+    "#btn-cadastro-ficha"
+  ).onclick =
+    () => {
+
+      panel
+        .querySelector(
+          "#f-ficha-produto"
+        )
+        .scrollIntoView({
+          behavior: "smooth",
+        });
+
+    };
+
+
+  panel.querySelector(
+    "#btn-cadastro-item"
+  ).onclick =
+    () => {
+
+      panel
+        .querySelector(
+          "#f-ficha-item"
+        )
+        .scrollIntoView({
+          behavior: "smooth",
+        });
+
+    };
+
+
+  panel.querySelector(
+    "#f-ficha-produto"
+  ).onsubmit =
+    (event) => {
+
+      event.preventDefault();
+
+
+      const formData =
+        new FormData(
+          event.target
+        );
+
+
+      const nome =
+        String(
+          formData.get(
+            "nome"
+          ) || ""
+        ).trim();
+
+
+      if (!nome) return;
+
+
+      state.fichas.push({
+
+        id: uid(),
+
+        nome,
+
+        itens: [],
+
+        custoTotal: 0,
+
+      });
+
+
+      event.target.reset();
+
+      renderAll();
+
+    };
+
+
+  panel.querySelector(
+    "#f-ficha-item"
+  ).onsubmit =
+    (event) => {
+
+      event.preventDefault();
+
+
+      const formData =
+        new FormData(
+          event.target
+        );
+
+
+      const ficha =
+        getFicha(
+          formData.get(
+            "fichaId"
+          )
+        );
+
+
+      const ingredient =
+        getIngredient(
+          formData.get(
+            "ingredienteId"
+          )
+        );
+
+
+      if (
+        !ficha ||
+        !ingredient
+      ) {
+
+        alert(
+          "Selecione ficha e ingrediente válidos."
+        );
+
+        return;
+
+      }
+
+
+      const qtd =
+        Number(
+          formData.get(
+            "quantidadeUso"
+          )
+        );
+
+
+      if (qtd <= 0) {
+
+        alert(
+          "A quantidade usada deve ser maior que zero."
+        );
+
+        return;
+
+      }
+
+
+      ficha.itens.push({
+
+        ingredienteId:
+          ingredient.id,
+
+        produto:
+          ingredient.produto,
+
+        unidade:
+          ingredient.unidade,
+
+        qtd,
+
+        custo:
+          qtd *
+          Number(
+            ingredient.valorUnitario ||
+              0
+          ),
+
+      });
+
+
+      recalculateFicha(
+        ficha
+      );
+
+
+      syncSalesForFicha(
+        ficha.id
+      );
+
+
+      event.target.reset();
+
+      renderAll();
+
+    };
+
+
+  panel
+    .querySelectorAll(
+      "[data-edit-ficha]"
+    )
+    .forEach(
+      (button) => {
+
+        button.onclick =
+          () => {
+
+            editFicha(
+              button.dataset
+                .editFicha
+            );
+
+          };
+
+      }
+    );
+
+
+  panel
+    .querySelectorAll(
+      "[data-del-ficha]"
+    )
+    .forEach(
+      (button) => {
+
+        button.onclick =
+          () => {
+
+            const fichaId =
+              button.dataset
+                .delFicha;
+
+
+            state.fichas =
+              state.fichas.filter(
+                (ficha) =>
+                  ficha.id !==
+                  fichaId
+              );
+
+
+            state.vendas =
+              state.vendas.filter(
+                (sale) =>
+                  sale.fichaId !==
+                  fichaId
+              );
+
+
+            renderAll();
+
+          };
+
+      }
+    );
+
 }
+
+
+/* =========================================================
+   VENDAS
+========================================================= */
 
 function renderVendas() {
-  const p = document.getElementById("vendas-panel");
-  p.innerHTML = `
-    <h2>Venda</h2>
-    <button class="toggle-btn" id="btn-cadastro-venda">+ Cadastrar Venda</button>
-    <form id="f-venda">
-      <select required name="fichaId"><option value="">Selecione o produto final</option>${state.fichas.map((f) => `<option value="${f.id}">${f.nome}</option>`).join("")}</select>
-      <input required type="number" min="0" step="0.01" name="lucroDesejadoPct" placeholder="Lucro desejado (%)" />
-      <input required type="number" min="0" step="0.01" name="precoPraticado" placeholder="Preço de venda praticado" />
-      <button type="submit">Salvar venda</button>
+
+  const panel =
+    document.getElementById(
+      "vendas-panel"
+    );
+
+
+  if (!panel) return;
+
+
+  panel.innerHTML = `
+
+    <h2>
+      Venda
+    </h2>
+
+
+    <button
+      class="toggle-btn"
+      id="btn-cadastro-venda"
+    >
+      + Cadastrar Venda
+    </button>
+
+
+    <form
+      id="f-venda"
+    >
+
+      <select
+        required
+        name="fichaId"
+      >
+
+        <option value="">
+          Selecione o produto final
+        </option>
+
+
+        ${state.fichas
+          .map(
+            (ficha) => `
+
+              <option
+                value="${ficha.id}"
+              >
+                ${escapeHTML(
+                  ficha.nome
+                )}
+              </option>
+
+            `
+          )
+          .join("")}
+
+      </select>
+
+
+      <input
+        required
+        type="number"
+        min="0"
+        step="0.01"
+        name="lucroDesejadoPct"
+        placeholder="Lucro desejado (%)"
+      />
+
+
+      <input
+        required
+        type="number"
+        min="0"
+        step="0.01"
+        name="precoPraticado"
+        placeholder="Preço de venda praticado"
+      />
+
+
+      <button type="submit">
+        Salvar venda
+      </button>
+
     </form>
-    <table><thead><tr><th>Produto</th><th>Preço sugerido</th><th>Praticado</th><th>Status</th><th>Lucro</th><th>Ficha</th><th>Ações</th></tr></thead>
-    <tbody>${state.vendas.map((v) => { const currentStatus = calculateSaleStatus(v.precoPraticado, v.precoSugerido, v.lucro, v.margemPct); v.status = currentStatus; return `<tr><td>${v.produto}</td><td>${BRL(v.precoSugerido)}</td><td>${BRL(v.precoPraticado)}</td><td>${statusBadge(currentStatus)}</td><td>${BRL(v.lucro)}</td><td><button class="secondary" data-open-ficha="${v.fichaId}">Acessar ficha</button></td><td><button class="secondary" data-del-venda="${v.id}">Excluir</button></td></tr>`; }).join("") || `<tr><td colspan="7">Sem vendas cadastradas.</td></tr>`}</tbody></table>`;
-  p.querySelector("#btn-cadastro-venda").onclick = () => p.querySelector("#f-venda").scrollIntoView({ behavior: "smooth" });
-  p.querySelector("#f-venda").onsubmit = (e) => {
-    e.preventDefault();
-    const fd = new FormData(e.target);
-    const f = state.fichas.find((x) => x.id === fd.get("fichaId"));
-    if (!f) return alert("Selecione uma ficha válida.");
-    const ld = Number(fd.get("lucroDesejadoPct"));
-    const pp = Number(fd.get("precoPraticado"));
-    const sugerido = f.custoTotal * (1 + ld / 100);
-    const lucro = pp - f.custoTotal;
-    const margem = f.custoTotal > 0 ? (lucro / f.custoTotal) * 100 : 0;
-    const status = calculateSaleStatus(pp, sugerido, lucro, margem);
-    state.vendas.push({ id: uid(), fichaId: f.id, produto: f.nome, custo: f.custoTotal, lucroDesejadoPct: ld, precoSugerido: sugerido, precoPraticado: pp, lucro, margemPct: margem, status });
-    renderAll();
-    e.target.reset();
-  };
-  p.querySelectorAll("[data-del-venda]").forEach((b) => b.onclick = () => { state.vendas = state.vendas.filter((v) => v.id !== b.dataset.delVenda); renderAll(); });
-  p.querySelectorAll("[data-open-ficha]").forEach((b) => b.onclick = () => { showTab("fichas"); });
+
+
+    <table>
+
+      <thead>
+
+        <tr>
+
+          <th>
+            Produto
+          </th>
+
+          <th>
+            Preço sugerido
+          </th>
+
+          <th>
+            Praticado
+          </th>
+
+          <th>
+            Status
+          </th>
+
+          <th>
+            Lucro
+          </th>
+
+          <th>
+            Ficha
+          </th>
+
+          <th>
+            Ações
+          </th>
+
+        </tr>
+
+      </thead>
+
+
+      <tbody>
+
+        ${
+          state.vendas
+            .map(
+              (sale) => {
+
+                const currentStatus =
+                  calculateSaleStatus(
+                    sale.precoPraticado,
+                    sale.precoSugerido,
+                    sale.lucro,
+                    sale.margemPct
+                  );
+
+
+                sale.status =
+                  currentStatus;
+
+
+                return `
+
+                  <tr>
+
+                    <td>
+                      ${escapeHTML(
+                        sale.produto
+                      )}
+                    </td>
+
+
+                    <td>
+                      ${BRL(
+                        sale.precoSugerido
+                      )}
+                    </td>
+
+
+                    <td>
+                      ${BRL(
+                        sale.precoPraticado
+                      )}
+                    </td>
+
+
+                    <td>
+                      ${statusBadge(
+                        currentStatus
+                      )}
+                    </td>
+
+
+                    <td>
+                      ${BRL(
+                        sale.lucro
+                      )}
+                    </td>
+
+
+                    <td>
+
+                      <button
+                        class="secondary"
+                        data-open-ficha="${sale.fichaId}"
+                      >
+                        Acessar ficha
+                      </button>
+
+                    </td>
+
+
+                    <td>
+
+                      <div
+                        class="actions-row"
+                      >
+
+                        <button
+                          class="secondary"
+                          data-edit-venda="${sale.id}"
+                        >
+                          ✏️ Editar
+                        </button>
+
+
+                        <button
+                          class="secondary"
+                          data-del-venda="${sale.id}"
+                        >
+                          🗑️ Excluir
+                        </button>
+
+                      </div>
+
+                    </td>
+
+                  </tr>
+
+                `;
+
+              }
+            )
+            .join("")
+
+          ||
+
+          `
+
+            <tr>
+
+              <td colspan="7">
+                Sem vendas cadastradas.
+              </td>
+
+            </tr>
+
+          `
+        }
+
+      </tbody>
+
+    </table>
+
+  `;
+
+
+  panel.querySelector(
+    "#btn-cadastro-venda"
+  ).onclick =
+    () => {
+
+      panel
+        .querySelector(
+          "#f-venda"
+        )
+        .scrollIntoView({
+          behavior: "smooth",
+        });
+
+    };
+
+
+  panel.querySelector(
+    "#f-venda"
+  ).onsubmit =
+    (event) => {
+
+      event.preventDefault();
+
+
+      const formData =
+        new FormData(
+          event.target
+        );
+
+
+      const ficha =
+        getFicha(
+          formData.get(
+            "fichaId"
+          )
+        );
+
+
+      if (!ficha) {
+
+        alert(
+          "Selecione uma ficha válida."
+        );
+
+        return;
+
+      }
+
+
+      const values =
+        calculateSaleValues(
+          ficha,
+
+          Number(
+            formData.get(
+              "lucroDesejadoPct"
+            )
+          ),
+
+          Number(
+            formData.get(
+              "precoPraticado"
+            )
+          )
+        );
+
+
+      state.vendas.push({
+
+        id: uid(),
+
+        fichaId:
+          ficha.id,
+
+        produto:
+          ficha.nome,
+
+        ...values,
+
+      });
+
+
+      event.target.reset();
+
+      renderAll();
+
+    };
+
+
+  panel
+    .querySelectorAll(
+      "[data-edit-venda]"
+    )
+    .forEach(
+      (button) => {
+
+        button.onclick =
+          () => {
+
+            editVenda(
+              button.dataset
+                .editVenda
+            );
+
+          };
+
+      }
+    );
+
+
+  panel
+    .querySelectorAll(
+      "[data-del-venda]"
+    )
+    .forEach(
+      (button) => {
+
+        button.onclick =
+          () => {
+
+            state.vendas =
+              state.vendas.filter(
+                (sale) =>
+                  sale.id !==
+                  button.dataset
+                    .delVenda
+              );
+
+
+            renderAll();
+
+          };
+
+      }
+    );
+
+
+  panel
+    .querySelectorAll(
+      "[data-open-ficha]"
+    )
+    .forEach(
+      (button) => {
+
+        button.onclick =
+          () => {
+
+            showTab(
+              "fichas"
+            );
+
+          };
+
+      }
+    );
+
 }
 
-function statusBadge(status) {
-  const cls = status === "margem alta" ? "high" : status === "ajustar" ? "warn" : status === "margem correta" ? "ok" : "ok";
-  return `<span class="badge ${cls}">${status}</span>`;
+
+/* =========================================================
+   MODAL
+========================================================= */
+
+function createModal(
+  title,
+  bodyHTML,
+  onSubmit
+) {
+
+  closeModal();
+
+
+  const overlay =
+    document.createElement(
+      "div"
+    );
+
+
+  overlay.className =
+    "modal-overlay";
+
+
+  overlay.id =
+    "app-modal";
+
+
+  overlay.innerHTML = `
+
+    <div
+      class="modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-title"
+    >
+
+
+      <div
+        class="modal-header"
+      >
+
+        <div>
+
+          <h3
+            id="modal-title"
+          >
+            ${escapeHTML(
+              title
+            )}
+          </h3>
+
+        </div>
+
+
+        <button
+          type="button"
+          class="modal-close"
+          data-modal-close
+          aria-label="Fechar"
+        >
+          ×
+        </button>
+
+      </div>
+
+
+      <form
+        id="modal-form"
+      >
+
+        <div
+          class="modal-body"
+        >
+
+          ${bodyHTML}
+
+        </div>
+
+
+        <div
+          class="modal-actions"
+        >
+
+          <button
+            type="button"
+            class="secondary"
+            data-modal-close
+          >
+            Cancelar
+          </button>
+
+
+          <button
+            type="submit"
+          >
+            Salvar alterações
+          </button>
+
+        </div>
+
+      </form>
+
+    </div>
+
+  `;
+
+
+  document.body.appendChild(
+    overlay
+  );
+
+
+  overlay
+    .querySelectorAll(
+      "[data-modal-close]"
+    )
+    .forEach(
+      (button) => {
+
+        button.onclick =
+          closeModal;
+
+      }
+    );
+
+
+  overlay.addEventListener(
+    "click",
+    (event) => {
+
+      if (
+        event.target ===
+        overlay
+      ) {
+
+        closeModal();
+
+      }
+
+    }
+  );
+
+
+  overlay.querySelector(
+    "#modal-form"
+  ).onsubmit =
+    (event) => {
+
+      event.preventDefault();
+
+
+      const result =
+        onSubmit(
+          new FormData(
+            event.target
+          ),
+
+          event.target,
+
+          overlay
+        );
+
+
+      if (
+        result !== false
+      ) {
+
+        closeModal();
+
+      }
+
+    };
+
+
+  const firstInput =
+    overlay.querySelector(
+      "input, select"
+    );
+
+
+  firstInput?.focus();
+
 }
+
+
+function closeModal() {
+
+  document
+    .getElementById(
+      "app-modal"
+    )
+    ?.remove();
+
+}
+
+
+/* =========================================================
+   EDITAR CUSTO
+========================================================= */
+
+function editCusto(id) {
+
+  const cost =
+    state.custos.find(
+      (item) =>
+        item.id === id
+    );
+
+
+  if (!cost) return;
+
+
+  createModal(
+
+    "Editar custo",
+
+    `
+
+      <label>
+        Descrição
+      </label>
+
+
+      <input
+        required
+        name="descricao"
+        value="${escapeHTML(
+          cost.descricao
+        )}"
+      />
+
+
+      <label>
+        Categoria
+      </label>
+
+
+      <input
+        required
+        name="categoria"
+        value="${escapeHTML(
+          cost.categoria
+        )}"
+      />
+
+
+      <label>
+        Valor
+      </label>
+
+
+      <input
+        required
+        type="number"
+        min="0"
+        step="0.01"
+        name="valor"
+        value="${Number(
+          cost.valor || 0
+        )}"
+      />
+
+    `,
+
+    (formData) => {
+
+      cost.descricao =
+        String(
+          formData.get(
+            "descricao"
+          ) || ""
+        ).trim();
+
+
+      cost.categoria =
+        String(
+          formData.get(
+            "categoria"
+          ) || ""
+        ).trim();
+
+
+      cost.valor =
+        Number(
+          formData.get(
+            "valor"
+          )
+        );
+
+
+      renderAll();
+
+    }
+
+  );
+
+}
+
+
+/* =========================================================
+   EDITAR INGREDIENTE
+========================================================= */
+
+function editIngrediente(
+  id
+) {
+
+  const ingredient =
+    getIngredient(id);
+
+
+  if (!ingredient) return;
+
+
+  createModal(
+
+    "Editar ingrediente",
+
+    `
+
+      <label>
+        Produto
+      </label>
+
+
+      <input
+        required
+        name="produto"
+        value="${escapeHTML(
+          ingredient.produto
+        )}"
+      />
+
+
+      <label>
+        Unidade
+      </label>
+
+
+      <input
+        required
+        name="unidade"
+        value="${escapeHTML(
+          ingredient.unidade
+        )}"
+      />
+
+
+      <label>
+        Quantidade de compra
+      </label>
+
+
+      <input
+        required
+        type="number"
+        min="0.01"
+        step="0.01"
+        name="quantidade"
+        value="${Number(
+          ingredient.quantidade || 0
+        )}"
+      />
+
+
+      <label>
+        Valor da compra
+      </label>
+
+
+      <input
+        required
+        type="number"
+        min="0"
+        step="0.01"
+        name="valor"
+        value="${Number(
+          ingredient.valorCompra || 0
+        )}"
+      />
+
+
+      <small>
+        O valor unitário será recalculado automaticamente.
+      </small>
+
+    `,
+
+    (formData) => {
+
+      const quantidade =
+        Number(
+          formData.get(
+            "quantidade"
+          )
+        );
+
+
+      const valorCompra =
+        Number(
+          formData.get(
+            "valor"
+          )
+        );
+
+
+      if (
+        quantidade <= 0
+      ) {
+
+        alert(
+          "A quantidade de compra deve ser maior que zero."
+        );
+
+        return false;
+
+      }
+
+
+      ingredient.produto =
+        String(
+          formData.get(
+            "produto"
+          ) || ""
+        ).trim();
+
+
+      ingredient.unidade =
+        String(
+          formData.get(
+            "unidade"
+          ) || ""
+        ).trim();
+
+
+      ingredient.quantidade =
+        quantidade;
+
+
+      ingredient.valorCompra =
+        valorCompra;
+
+
+      ingredient.valorUnitario =
+        valorCompra /
+        quantidade;
+
+
+      recalculateAllFichas();
+
+
+      renderAll();
+
+    }
+
+  );
+
+}
+
+
+/* =========================================================
+   EXCLUIR INGREDIENTE
+========================================================= */
+
+function deleteIngrediente(
+  id
+) {
+
+  const usedInFicha =
+    state.fichas.some(
+      (ficha) =>
+        ficha.itens?.some(
+          (item) =>
+            item.ingredienteId ===
+            id
+        )
+    );
+
+
+  if (usedInFicha) {
+
+    alert(
+      "Este ingrediente está sendo usado em uma ou mais fichas técnicas. Edite ou remova o ingrediente da ficha antes de excluí-lo."
+    );
+
+    return;
+
+  }
+
+
+  state.ingredientes =
+    state.ingredientes.filter(
+      (ingredient) =>
+        ingredient.id !==
+        id
+    );
+
+
+  renderAll();
+
+}
+
+
+/* =========================================================
+   EDITAR FICHA
+========================================================= */
+
+function editFicha(id) {
+
+  const ficha =
+    getFicha(id);
+
+
+  if (!ficha) return;
+
+
+  const items =
+    Array.isArray(
+      ficha.itens
+    )
+      ? ficha.itens
+      : [];
+
+
+  createModal(
+
+    "Editar ficha técnica",
+
+    `
+
+      <label>
+        Produto final
+      </label>
+
+
+      <input
+        required
+        name="nome"
+        value="${escapeHTML(
+          ficha.nome
+        )}"
+      />
+
+
+      <div
+        class="modal-section-title"
+      >
+        Ingredientes da ficha
+      </div>
+
+
+      <div
+        id="ficha-edit-items"
+      >
+
+        ${items
+          .map(
+            (item) =>
+              fichaItemEditorRow(
+                item
+              )
+          )
+          .join("")}
+
+      </div>
+
+
+      <div
+        class="ficha-add-item"
+      >
+
+        <select
+          id="novo-ficha-ingrediente"
+        >
+
+          <option value="">
+            Adicionar ingrediente...
+          </option>
+
+
+          ${state.ingredientes
+            .map(
+              (ingredient) => `
+
+                <option
+                  value="${ingredient.id}"
+                >
+                  ${escapeHTML(
+                    ingredient.produto
+                  )}
+
+                  (${escapeHTML(
+                    ingredient.unidade
+                  )})
+
+                </option>
+
+              `
+            )
+            .join("")}
+
+        </select>
+
+
+        <input
+          id="novo-ficha-qtd"
+          type="number"
+          min="0.01"
+          step="0.01"
+          placeholder="Quantidade"
+        />
+
+
+        <button
+          type="button"
+          id="btn-add-ficha-item"
+        >
+          Adicionar
+        </button>
+
+      </div>
+
+
+      <small>
+        Alterações nos ingredientes recalculam automaticamente o custo da ficha e das vendas vinculadas.
+      </small>
+
+    `,
+
+    (
+      formData,
+      formElement,
+      overlay
+    ) => {
+
+      const nome =
+        String(
+          formData.get(
+            "nome"
+          ) || ""
+        ).trim();
+
+
+      if (!nome) {
+
+        alert(
+          "Informe o nome do produto."
+        );
+
+        return false;
+
+      }
+
+
+      const rows = [
+        ...overlay.querySelectorAll(
+          ".ficha-item-row"
+        ),
+      ];
+
+
+      const newItems = [];
+
+
+      for (
+        const row of rows
+      ) {
+
+        const ingredientId =
+          row.dataset
+            .ingredientId;
+
+
+        const qtd =
+          Number(
+            row.querySelector(
+              ".ficha-item-qtd"
+            )?.value
+          );
+
+
+        const ingredient =
+          getIngredient(
+            ingredientId
+          );
+
+
+        if (
+          !ingredient ||
+          qtd <= 0
+        ) {
+
+          alert(
+            "Verifique os ingredientes e quantidades da ficha."
+          );
+
+          return false;
+
+        }
+
+
+        newItems.push({
+
+          ingredienteId:
+            ingredient.id,
+
+          produto:
+            ingredient.produto,
+
+          unidade:
+            ingredient.unidade,
+
+          qtd,
+
+          custo:
+            qtd *
+            Number(
+              ingredient.valorUnitario ||
+                0
+            ),
+
+        });
+
+      }
+
+
+      ficha.nome =
+        nome;
+
+
+      ficha.itens =
+        newItems;
+
+
+      recalculateFicha(
+        ficha
+      );
+
+
+      syncSalesForFicha(
+        ficha.id
+      );
+
+
+      renderAll();
+
+    }
+
+  );
+
+
+  const overlay =
+    document.getElementById(
+      "app-modal"
+    );
+
+
+  if (!overlay) return;
+
+
+  overlay.querySelector(
+    "#btn-add-ficha-item"
+  ).onclick =
+    () => {
+
+      const ingredientId =
+        overlay.querySelector(
+          "#novo-ficha-ingrediente"
+        ).value;
+
+
+      const qtd =
+        Number(
+          overlay.querySelector(
+            "#novo-ficha-qtd"
+          ).value
+        );
+
+
+      const ingredient =
+        getIngredient(
+          ingredientId
+        );
+
+
+      if (
+        !ingredient ||
+        qtd <= 0
+      ) {
+
+        alert(
+          "Selecione um ingrediente e informe uma quantidade válida."
+        );
+
+        return;
+
+      }
+
+
+      const container =
+        overlay.querySelector(
+          "#ficha-edit-items"
+        );
+
+
+      container.insertAdjacentHTML(
+        "beforeend",
+
+        fichaItemEditorRow({
+
+          ingredienteId:
+            ingredient.id,
+
+          produto:
+            ingredient.produto,
+
+          unidade:
+            ingredient.unidade,
+
+          qtd,
+
+        })
+
+      );
+
+
+      overlay.querySelector(
+        "#novo-ficha-ingrediente"
+      ).value = "";
+
+
+      overlay.querySelector(
+        "#novo-ficha-qtd"
+      ).value = "";
+
+
+      bindFichaItemRemoveButtons(
+        overlay
+      );
+
+    };
+
+
+  bindFichaItemRemoveButtons(
+    overlay
+  );
+
+}
+
+
+function fichaItemEditorRow(
+  item
+) {
+
+  return `
+
+    <div
+      class="ficha-item-row"
+      data-ingredient-id="${item.ingredienteId}"
+    >
+
+      <span
+        class="ficha-item-name"
+      >
+        ${escapeHTML(
+          item.produto
+        )}
+      </span>
+
+
+      <span
+        class="ficha-item-unit"
+      >
+        ${escapeHTML(
+          item.unidade
+        )}
+      </span>
+
+
+      <input
+        class="ficha-item-qtd"
+        type="number"
+        min="0.01"
+        step="0.01"
+        value="${Number(
+          item.qtd || 0
+        )}"
+        required
+      />
+
+
+      <button
+        type="button"
+        class="secondary ficha-item-remove"
+      >
+        Remover
+      </button>
+
+    </div>
+
+  `;
+
+}
+
+
+function bindFichaItemRemoveButtons(
+  overlay
+) {
+
+  overlay
+    .querySelectorAll(
+      ".ficha-item-remove"
+    )
+    .forEach(
+      (button) => {
+
+        button.onclick =
+          () => {
+
+            button
+              .closest(
+                ".ficha-item-row"
+              )
+              ?.remove();
+
+          };
+
+      }
+    );
+
+}
+
+
+/* =========================================================
+   EDITAR VENDA
+========================================================= */
+
+function editVenda(id) {
+
+  const sale =
+    state.vendas.find(
+      (item) =>
+        item.id === id
+    );
+
+
+  if (!sale) return;
+
+
+  createModal(
+
+    "Editar venda",
+
+    `
+
+      <label>
+        Produto final
+      </label>
+
+
+      <select
+        required
+        name="fichaId"
+      >
+
+        ${state.fichas
+          .map(
+            (ficha) => `
+
+              <option
+                value="${ficha.id}"
+
+                ${
+                  ficha.id ===
+                  sale.fichaId
+                    ? "selected"
+                    : ""
+                }
+              >
+
+                ${escapeHTML(
+                  ficha.nome
+                )}
+
+              </option>
+
+            `
+          )
+          .join("")}
+
+      </select>
+
+
+      <label>
+        Lucro desejado (%)
+      </label>
+
+
+      <input
+        required
+        type="number"
+        min="0"
+        step="0.01"
+        name="lucroDesejadoPct"
+        value="${Number(
+          sale.lucroDesejadoPct ||
+            0
+        )}"
+      />
+
+
+      <label>
+        Preço de venda praticado
+      </label>
+
+
+      <input
+        required
+        type="number"
+        min="0"
+        step="0.01"
+        name="precoPraticado"
+        value="${Number(
+          sale.precoPraticado ||
+            0
+        )}"
+      />
+
+
+      <small>
+        Preço sugerido, lucro, margem e status serão recalculados automaticamente.
+      </small>
+
+    `,
+
+    (formData) => {
+
+      const ficha =
+        getFicha(
+          formData.get(
+            "fichaId"
+          )
+        );
+
+
+      if (!ficha) {
+
+        alert(
+          "Selecione uma ficha válida."
+        );
+
+        return false;
+
+      }
+
+
+      const values =
+        calculateSaleValues(
+
+          ficha,
+
+          Number(
+            formData.get(
+              "lucroDesejadoPct"
+            )
+          ),
+
+          Number(
+            formData.get(
+              "precoPraticado"
+            )
+          )
+
+        );
+
+
+      sale.fichaId =
+        ficha.id;
+
+
+      sale.produto =
+        ficha.nome;
+
+
+      Object.assign(
+        sale,
+        values
+      );
+
+
+      renderAll();
+
+    }
+
+  );
+
+}
+
+
+/* =========================================================
+   INICIALIZAÇÃO
+========================================================= */
+
+renderTabs();
+
+showTab(
+  "dashboard"
+);
+
+renderAll();
