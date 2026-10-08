@@ -1071,3 +1071,48 @@ tbody tr:hover {
     grid-template-columns: 1fr;
   }
 }
+/* =========================================================
+   FILTROS
+========================================================= */
+
+.filters-row {
+  display: flex;
+  gap: .6rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin: .8rem 0 .4rem;
+}
+
+.search-box {
+  flex: 1 1 280px;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-box .search-icon {
+  position: absolute;
+  left: .75rem;
+  pointer-events: none;
+  opacity: .7;
+}
+
+.search-box input {
+  width: 100%;
+  padding-left: 2.2rem;
+}
+
+.sort-select {
+  min-width: 130px;
+  background: #fff;
+}
+
+.filter-info {
+  color: var(--muted);
+  font-size: .85rem;
+  margin: .35rem 0 .6rem;
+}
+
+.filter-info strong {
+  color: var(--text);
+}

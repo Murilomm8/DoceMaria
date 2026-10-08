@@ -216,7 +216,41 @@ function getFicha(id) {
 
 }
 
+/* =========================================================
+   FILTROS E ORDENAÇÃO
+========================================================= */
 
+function normalizeText(value) {
+  return String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("pt-BR")
+    .trim();
+}
+
+function filterAndSort(items, searchTerm, getLabel, sortOrder = "az") {
+  const search = normalizeText(searchTerm);
+
+  return items
+    .filter((item) =>
+      normalizeText(getLabel(item)).includes(search)
+    )
+    .slice()
+    .sort((a, b) => {
+      const comparison = String(getLabel(a) ?? "").localeCompare(
+        String(getLabel(b) ?? ""),
+        "pt-BR",
+        {
+          sensitivity: "base",
+          numeric: true,
+        }
+      );
+
+      return sortOrder === "za"
+        ? -comparison
+        : comparison;
+    });
+}
 /* =========================================================
    RECÁLCULOS
 ========================================================= */
@@ -983,22 +1017,19 @@ function progress(
 ========================================================= */
 
 function renderCustos() {
-
-  const panel =
-    document.getElementById(
-      "custos-panel"
-    );
-
+  const panel = document.getElementById("custos-panel");
 
   if (!panel) return;
 
+  const custosFiltrados = filterAndSort(
+    state.custos,
+    renderCustos.searchTerm,
+    (cost) => cost.descricao,
+    renderCustos.sortOrder
+  );
 
   panel.innerHTML = `
-
-    <h2>
-      Custos e Taxas
-    </h2>
-
+    <h2>Custos e Taxas</h2>
 
     <button
       class="toggle-btn"
@@ -1007,10 +1038,7 @@ function renderCustos() {
       + Cadastrar Custo
     </button>
 
-
-    <form
-      id="f-custos"
-    >
+    <form id="f-custos">
 
       <input
         required
@@ -1018,13 +1046,11 @@ function renderCustos() {
         placeholder="Descrição (Ex.: Aluguel)"
       />
 
-
       <input
         required
         name="categoria"
         placeholder="Categoria (fixo/taxa/imposto)"
       />
-
 
       <input
         required
@@ -1035,150 +1061,162 @@ function renderCustos() {
         placeholder="Valor"
       />
 
-
       <button type="submit">
         Salvar cadastro
       </button>
 
     </form>
 
+    <div class="filters-row">
+
+      <div class="search-box">
+
+        <span class="search-icon">🔎</span>
+
+        <input
+          id="filtro-custo-descricao"
+          type="search"
+          placeholder="Buscar custo..."
+          value="${escapeHTML(renderCustos.searchTerm)}"
+        />
+
+      </div>
+
+      <select
+        id="ordenacao-custo"
+        class="sort-select"
+      >
+
+        <option
+          value="az"
+          ${renderCustos.sortOrder === "az" ? "selected" : ""}
+        >
+          A → Z
+        </option>
+
+        <option
+          value="za"
+          ${renderCustos.sortOrder === "za" ? "selected" : ""}
+        >
+          Z → A
+        </option>
+
+      </select>
+
+    </div>
+
+    <div class="filter-info">
+      ${custosFiltrados.length} custo(s) encontrado(s)
+    </div>
 
     <table>
 
       <thead>
 
         <tr>
-
-          <th>
-            Descrição
-          </th>
-
-          <th>
-            Categoria
-          </th>
-
-          <th>
-            Valor
-          </th>
-
-          <th>
-            Ações
-          </th>
-
+          <th>Descrição</th>
+          <th>Categoria</th>
+          <th>Valor</th>
+          <th>Ações</th>
         </tr>
 
       </thead>
 
-
       <tbody>
 
         ${
-          state.custos
-            .map(
-              (cost) => `
+          custosFiltrados.length
+            ? custosFiltrados
+                .map(
+                  (cost) => `
+                    <tr>
 
+                      <td>
+                        ${escapeHTML(cost.descricao)}
+                      </td>
+
+                      <td>
+                        ${escapeHTML(cost.categoria)}
+                      </td>
+
+                      <td>
+                        ${BRL(cost.valor)}
+                      </td>
+
+                      <td>
+
+                        <div class="actions-row">
+
+                          <button
+                            class="secondary"
+                            data-edit-custo="${cost.id}"
+                          >
+                            ✏️ Editar
+                          </button>
+
+                          <button
+                            class="secondary"
+                            data-del-custo="${cost.id}"
+                          >
+                            🗑️ Excluir
+                          </button>
+
+                        </div>
+
+                      </td>
+
+                    </tr>
+                  `
+                )
+                .join("")
+            : `
                 <tr>
 
-                  <td>
-                    ${escapeHTML(
-                      cost.descricao
-                    )}
-                  </td>
-
-                  <td>
-                    ${escapeHTML(
-                      cost.categoria
-                    )}
-                  </td>
-
-                  <td>
-                    ${BRL(
-                      cost.valor
-                    )}
-                  </td>
-
-                  <td>
-
-                    <div
-                      class="actions-row"
-                    >
-
-                      <button
-                        class="secondary"
-                        data-edit-custo="${cost.id}"
-                      >
-                        ✏️ Editar
-                      </button>
-
-
-                      <button
-                        class="secondary"
-                        data-del-custo="${cost.id}"
-                      >
-                        🗑️ Excluir
-                      </button>
-
-                    </div>
-
+                  <td colspan="4">
+                    ${
+                      renderCustos.searchTerm
+                        ? "Nenhum custo encontrado para essa busca."
+                        : "Sem cadastros ainda."
+                    }
                   </td>
 
                 </tr>
-
               `
-            )
-            .join("")
-
-          ||
-
-          `
-
-            <tr>
-
-              <td colspan="4">
-                Sem cadastros ainda.
-              </td>
-
-            </tr>
-
-          `
         }
 
       </tbody>
 
     </table>
-
   `;
 
+  /* =========================================================
+     BOTÃO CADASTRO
+  ========================================================= */
 
-  panel.querySelector(
-    "#btn-cadastro-custo"
-  ).onclick =
-    () => {
+  panel
+    .querySelector("#btn-cadastro-custo")
+    .onclick = () => {
 
       panel
-        .querySelector(
-          "#f-custos"
-        )
+        .querySelector("#f-custos")
         .scrollIntoView({
           behavior: "smooth",
         });
 
     };
 
+  /* =========================================================
+     CADASTRO
+  ========================================================= */
 
-  panel.querySelector(
-    "#f-custos"
-  ).onsubmit =
-    (event) => {
+  panel
+    .querySelector("#f-custos")
+    .onsubmit = (event) => {
 
       event.preventDefault();
 
-
       const formData =
-        new FormData(
-          event.target
-        );
-
+        new FormData(event.target);
 
       state.custos.push({
 
@@ -1186,27 +1224,20 @@ function renderCustos() {
 
         descricao:
           String(
-            formData.get(
-              "descricao"
-            ) || ""
+            formData.get("descricao") || ""
           ).trim(),
 
         categoria:
           String(
-            formData.get(
-              "categoria"
-            ) || ""
+            formData.get("categoria") || ""
           ).trim(),
 
         valor:
           Number(
-            formData.get(
-              "valor"
-            )
+            formData.get("valor")
           ),
 
       });
-
 
       event.target.reset();
 
@@ -1214,54 +1245,128 @@ function renderCustos() {
 
     };
 
+  /* =========================================================
+     BUSCA
+  ========================================================= */
+
+  const filtro =
+    panel.querySelector(
+      "#filtro-custo-descricao"
+    );
+
+  filtro?.addEventListener(
+    "input",
+    (event) => {
+
+      const cursorPosition =
+        event.target.selectionStart;
+
+      renderCustos.searchTerm =
+        event.target.value;
+
+      renderCustos();
+
+      const novoCampo =
+        document.getElementById(
+          "filtro-custo-descricao"
+        );
+
+      if (novoCampo) {
+
+        novoCampo.focus();
+
+        const position =
+          Math.min(
+            cursorPosition ??
+              novoCampo.value.length,
+            novoCampo.value.length
+          );
+
+        novoCampo.setSelectionRange(
+          position,
+          position
+        );
+
+      }
+
+    }
+  );
+
+  /* =========================================================
+     ORDENAÇÃO
+  ========================================================= */
+
+  const ordenacao =
+    panel.querySelector(
+      "#ordenacao-custo"
+    );
+
+  ordenacao?.addEventListener(
+    "change",
+    (event) => {
+
+      renderCustos.sortOrder =
+        event.target.value;
+
+      renderCustos();
+
+    }
+  );
+
+  /* =========================================================
+     EDITAR
+  ========================================================= */
 
   panel
     .querySelectorAll(
       "[data-edit-custo]"
     )
-    .forEach(
-      (button) => {
+    .forEach((button) => {
 
-        button.onclick =
-          () => {
+      button.onclick = () => {
 
-            editCusto(
-              button.dataset
-                .editCusto
-            );
+        editCusto(
+          button.dataset.editCusto
+        );
 
-          };
+      };
 
-      }
-    );
+    });
 
+  /* =========================================================
+     EXCLUIR
+  ========================================================= */
 
   panel
     .querySelectorAll(
       "[data-del-custo]"
     )
-    .forEach(
-      (button) => {
+    .forEach((button) => {
 
-        button.onclick =
-          () => {
+      button.onclick = () => {
 
-            state.custos =
-              state.custos.filter(
-                (cost) =>
-                  cost.id !==
-                  button.dataset
-                    .delCusto
-              );
+        state.custos =
+          state.custos.filter(
+            (cost) =>
+              cost.id !==
+              button.dataset.delCusto
+          );
 
-            renderAll();
+        renderAll();
 
-          };
+      };
 
-      }
-    );
+    });
 
 }
+
+
+/* =========================================================
+   ESTADO DOS FILTROS DE CUSTOS
+========================================================= */
+
+renderCustos.searchTerm = "";
+renderCustos.sortOrder = "az";
 
 
 /* =========================================================
@@ -1269,22 +1374,14 @@ function renderCustos() {
 ========================================================= */
 
 function renderIngredientes() {
-
-  const panel =
-    document.getElementById(
-      "ingredientes-panel"
-    );
-
+  const panel = document.getElementById("ingredientes-panel");
 
   if (!panel) return;
 
-
   panel.innerHTML = `
-
     <h2>
       Ingredientes
     </h2>
-
 
     <button
       class="toggle-btn"
@@ -1292,7 +1389,6 @@ function renderIngredientes() {
     >
       + Cadastrar Ingrediente
     </button>
-
 
     <form
       id="f-ing"
@@ -1304,13 +1400,11 @@ function renderIngredientes() {
         placeholder="Produto"
       />
 
-
       <input
         required
         name="unidade"
         placeholder="Unidade (ml, g, kg, un)"
       />
-
 
       <input
         required
@@ -1321,7 +1415,6 @@ function renderIngredientes() {
         placeholder="Quantidade de compra"
       />
 
-
       <input
         required
         type="number"
@@ -1331,13 +1424,49 @@ function renderIngredientes() {
         placeholder="Valor da compra"
       />
 
-
       <button type="submit">
         Salvar cadastro
       </button>
 
     </form>
 
+    <!-- FILTROS -->
+    <div class="filters-row">
+
+      <div class="search-box">
+
+        <span class="search-icon">
+          🔎
+        </span>
+
+        <input
+          type="search"
+          id="filtro-ingrediente-produto"
+          placeholder="Pesquisar ingrediente..."
+          autocomplete="off"
+        />
+
+      </div>
+
+      <select
+        id="ordenacao-ingrediente"
+        class="sort-select"
+      >
+        <option value="az">
+          A → Z
+        </option>
+
+        <option value="za">
+          Z → A
+        </option>
+      </select>
+
+    </div>
+
+    <div
+      class="filter-info"
+      id="info-filtro-ingrediente"
+    ></div>
 
     <table>
 
@@ -1373,14 +1502,91 @@ function renderIngredientes() {
 
       </thead>
 
+      <tbody id="tbody-ingredientes">
 
-      <tbody>
+      </tbody>
 
-        ${
-          state.ingredientes
+    </table>
+  `;
+
+  /* =========================================================
+     ESTADO DOS FILTROS
+  ========================================================= */
+
+  if (typeof renderIngredientes.searchTerm !== "string") {
+    renderIngredientes.searchTerm = "";
+  }
+
+  if (
+    renderIngredientes.sortOrder !== "az" &&
+    renderIngredientes.sortOrder !== "za"
+  ) {
+    renderIngredientes.sortOrder = "az";
+  }
+
+  /* =========================================================
+     RENDERIZAÇÃO DA TABELA
+  ========================================================= */
+
+  const renderTabelaIngredientes = () => {
+    const tbody = panel.querySelector(
+      "#tbody-ingredientes"
+    );
+
+    const info = panel.querySelector(
+      "#info-filtro-ingrediente"
+    );
+
+    const searchInput = panel.querySelector(
+      "#filtro-ingrediente-produto"
+    );
+
+    const sortSelect = panel.querySelector(
+      "#ordenacao-ingrediente"
+    );
+
+    const ingredientesFiltrados = filterAndSort(
+      state.ingredientes,
+      renderIngredientes.searchTerm,
+      (ingredient) => ingredient.produto,
+      renderIngredientes.sortOrder
+    );
+
+    if (searchInput) {
+      searchInput.value =
+        renderIngredientes.searchTerm;
+    }
+
+    if (sortSelect) {
+      sortSelect.value =
+        renderIngredientes.sortOrder;
+    }
+
+    if (info) {
+      const total = state.ingredientes.length;
+      const exibidos = ingredientesFiltrados.length;
+
+      if (renderIngredientes.searchTerm) {
+        info.innerHTML = `
+          Exibindo
+          <strong>${exibidos}</strong>
+          de
+          <strong>${total}</strong>
+          ingredientes.
+        `;
+      } else {
+        info.innerHTML = `
+          <strong>${total}</strong>
+          ingrediente(s) cadastrado(s).
+        `;
+      }
+    }
+
+    tbody.innerHTML =
+      ingredientesFiltrados.length
+        ? ingredientesFiltrados
             .map(
               (ingredient) => `
-
                 <tr>
 
                   <td>
@@ -1397,8 +1603,7 @@ function renderIngredientes() {
 
                   <td>
                     ${Number(
-                      ingredient.quantidade ||
-                        0
+                      ingredient.quantidade || 0
                     )}
                   </td>
 
@@ -1416,9 +1621,7 @@ function renderIngredientes() {
 
                   <td>
 
-                    <div
-                      class="actions-row"
-                    >
+                    <div class="actions-row">
 
                       <button
                         class="secondary"
@@ -1426,7 +1629,6 @@ function renderIngredientes() {
                       >
                         ✏️ Editar
                       </button>
-
 
                       <button
                         class="secondary"
@@ -1440,724 +1642,595 @@ function renderIngredientes() {
                   </td>
 
                 </tr>
-
               `
             )
             .join("")
-
-          ||
-
-          `
-
+        : `
             <tr>
 
               <td colspan="6">
-                Sem cadastros ainda.
+                ${
+                  renderIngredientes.searchTerm
+                    ? "Nenhum ingrediente encontrado."
+                    : "Sem cadastros ainda."
+                }
               </td>
 
             </tr>
+          `;
 
-          `
-        }
+    /* =========================================================
+       BOTÕES DE EDITAR
+    ========================================================= */
 
-      </tbody>
+    panel
+      .querySelectorAll("[data-edit-ing]")
+      .forEach((button) => {
 
-    </table>
+        button.onclick = () => {
 
-  `;
+          editIngrediente(
+            button.dataset.editIng
+          );
 
-
-  panel.querySelector(
-    "#btn-cadastro-ing"
-  ).onclick =
-    () => {
-
-      panel
-        .querySelector(
-          "#f-ing"
-        )
-        .scrollIntoView({
-          behavior: "smooth",
-        });
-
-    };
-
-
-  panel.querySelector(
-    "#f-ing"
-  ).onsubmit =
-    (event) => {
-
-      event.preventDefault();
-
-
-      const formData =
-        new FormData(
-          event.target
-        );
-
-
-      const quantidade =
-        Number(
-          formData.get(
-            "quantidade"
-          )
-        );
-
-
-      const valorCompra =
-        Number(
-          formData.get(
-            "valor"
-          )
-        );
-
-
-      if (
-        quantidade <= 0
-      ) {
-
-        alert(
-          "A quantidade de compra deve ser maior que zero."
-        );
-
-        return;
-
-      }
-
-
-      state.ingredientes.push({
-
-        id: uid(),
-
-        produto:
-          String(
-            formData.get(
-              "produto"
-            ) || ""
-          ).trim(),
-
-        unidade:
-          String(
-            formData.get(
-              "unidade"
-            ) || ""
-          ).trim(),
-
-        quantidade,
-
-        valorCompra,
-
-        valorUnitario:
-          valorCompra /
-          quantidade,
+        };
 
       });
 
+    /* =========================================================
+       BOTÕES DE EXCLUIR
+    ========================================================= */
 
-      event.target.reset();
+    panel
+      .querySelectorAll("[data-del-ing]")
+      .forEach((button) => {
 
-      renderAll();
+        button.onclick = () => {
 
-    };
+          deleteIngrediente(
+            button.dataset.delIng
+          );
 
+        };
 
-  panel
-    .querySelectorAll(
-      "[data-edit-ing]"
-    )
-    .forEach(
-      (button) => {
+      });
+  };
 
-        button.onclick =
-          () => {
+  /* =========================================================
+     BOTÃO CADASTRAR
+  ========================================================= */
 
-            editIngrediente(
-              button.dataset
-                .editIng
-            );
+  panel.querySelector(
+    "#btn-cadastro-ing"
+  ).onclick = () => {
 
-          };
+    panel
+      .querySelector("#f-ing")
+      .scrollIntoView({
+        behavior: "smooth",
+      });
 
-      }
+  };
+
+  /* =========================================================
+     CADASTRO DE INGREDIENTE
+  ========================================================= */
+
+  panel.querySelector(
+    "#f-ing"
+  ).onsubmit = (event) => {
+
+    event.preventDefault();
+
+    const formData = new FormData(
+      event.target
     );
 
-
-  panel
-    .querySelectorAll(
-      "[data-del-ing]"
-    )
-    .forEach(
-      (button) => {
-
-        button.onclick =
-          () => {
-
-            deleteIngrediente(
-              button.dataset
-                .delIng
-            );
-
-          };
-
-      }
+    const quantidade = Number(
+      formData.get("quantidade")
     );
 
+    const valorCompra = Number(
+      formData.get("valor")
+    );
+
+    if (quantidade <= 0) {
+
+      alert(
+        "A quantidade de compra deve ser maior que zero."
+      );
+
+      return;
+
+    }
+
+    state.ingredientes.push({
+
+      id: uid(),
+
+      produto:
+        String(
+          formData.get("produto") || ""
+        ).trim(),
+
+      unidade:
+        String(
+          formData.get("unidade") || ""
+        ).trim(),
+
+      quantidade,
+
+      valorCompra,
+
+      valorUnitario:
+        valorCompra / quantidade,
+
+    });
+
+    event.target.reset();
+
+    renderAll();
+
+  };
+
+  /* =========================================================
+     PESQUISA
+  ========================================================= */
+
+  const searchInput = panel.querySelector(
+    "#filtro-ingrediente-produto"
+  );
+
+  searchInput.value =
+    renderIngredientes.searchTerm;
+
+  searchInput.addEventListener(
+    "input",
+    (event) => {
+
+      renderIngredientes.searchTerm =
+        event.target.value;
+
+      renderTabelaIngredientes();
+
+      searchInput.focus();
+
+      const length =
+        searchInput.value.length;
+
+      searchInput.setSelectionRange(
+        length,
+        length
+      );
+
+    }
+  );
+
+  /* =========================================================
+     ORDENAÇÃO
+  ========================================================= */
+
+  const sortSelect = panel.querySelector(
+    "#ordenacao-ingrediente"
+  );
+
+  sortSelect.value =
+    renderIngredientes.sortOrder;
+
+  sortSelect.addEventListener(
+    "change",
+    (event) => {
+
+      renderIngredientes.sortOrder =
+        event.target.value;
+
+      renderTabelaIngredientes();
+
+    }
+  );
+
+  /* =========================================================
+     PRIMEIRA RENDERIZAÇÃO
+  ========================================================= */
+
+  renderTabelaIngredientes();
 }
-
 
 /* =========================================================
    FICHAS
 ========================================================= */
-
 function renderFichas() {
+  const panel = document.getElementById("fichas-panel");
 
-  const panel =
-    document.getElementById(
-      "fichas-panel"
-    );
-
-
-  if (!panel) return;
-
+  const fichasFiltradas = filterAndSort(
+    state.fichas,
+    renderFichas.searchTerm,
+    (ficha) => ficha.nome,
+    renderFichas.sortOrder
+  );
 
   panel.innerHTML = `
+    <h2>Ficha Técnica</h2>
 
-    <h2>
-      Ficha Técnica
-    </h2>
+    <div class="actions-row">
+      <button id="btn-nova-ficha">+ Nova ficha</button>
+    </div>
 
-
-    <button
-      class="toggle-btn"
-      id="btn-cadastro-ficha"
-    >
-      + Cadastrar Produto Final
-    </button>
-
-
-    <form
-      id="f-ficha-produto"
-    >
-
+    <form id="f-ficha" class="hidden">
       <input
+        id="f-ficha-produto"
+        placeholder="Nome do produto final"
         required
-        name="nome"
-        placeholder="Produto final"
       />
 
-
       <button type="submit">
-        Criar ficha
+        Salvar ficha
       </button>
 
+      <button
+        type="button"
+        class="secondary"
+        id="cancelar-ficha"
+      >
+        Cancelar
+      </button>
     </form>
 
+    <div class="filters-row">
+      <div class="search-box">
+        <span class="search-icon">🔎</span>
 
-    <button
-      class="toggle-btn"
-      id="btn-cadastro-item"
-    >
-      + Cadastrar Ingrediente na Ficha
-    </button>
+        <input
+          id="filtro-ficha-produto"
+          type="search"
+          placeholder="Buscar produto..."
+          value="${escapeHTML(renderFichas.searchTerm)}"
+        />
+      </div>
 
-
-    <form
-      id="f-ficha-item"
-    >
-
-      <select
-        required
-        name="fichaId"
-      >
-
-        <option value="">
-          Selecione a ficha
+      <select id="ordenacao-ficha" class="sort-select">
+        <option value="az" ${
+          renderFichas.sortOrder === "az" ? "selected" : ""
+        }>
+          A → Z
         </option>
 
+        <option value="za" ${
+          renderFichas.sortOrder === "za" ? "selected" : ""
+        }>
+          Z → A
+        </option>
+      </select>
+    </div>
+
+    <div id="info-filtro-ficha" class="filter-info">
+      ${fichasFiltradas.length} ficha(s) encontrada(s)
+    </div>
+
+    <form id="f-ficha-item">
+      <select id="fichaId" required>
+        <option value="">Selecione a ficha</option>
 
         ${state.fichas
           .map(
             (ficha) => `
-
-              <option
-                value="${ficha.id}"
-              >
-                ${escapeHTML(
-                  ficha.nome
-                )}
+              <option value="${ficha.id}">
+                ${escapeHTML(ficha.nome)}
               </option>
-
             `
           )
           .join("")}
-
       </select>
 
-
-      <select
-        required
-        name="ingredienteId"
-      >
-
-        <option value="">
-          Selecione o ingrediente
-        </option>
-
+      <select id="ingredienteId" required>
+        <option value="">Selecione o ingrediente</option>
 
         ${state.ingredientes
           .map(
             (ingredient) => `
-
-              <option
-                value="${ingredient.id}"
-              >
-                ${escapeHTML(
-                  ingredient.produto
-                )}
-                (${escapeHTML(
-                  ingredient.unidade
-                )})
+              <option value="${ingredient.id}">
+                ${escapeHTML(ingredient.produto)}
               </option>
-
             `
           )
           .join("")}
-
       </select>
 
-
       <input
-        required
+        id="quantidadeUso"
         type="number"
-        min="0.01"
-        step="0.01"
-        name="quantidadeUso"
+        min="0"
+        step="0.001"
         placeholder="Quantidade usada"
+        required
       />
-
 
       <button type="submit">
         Adicionar ingrediente
       </button>
-
     </form>
 
-
     <table>
-
       <thead>
-
         <tr>
-
-          <th>
-            Produto final
-          </th>
-
-          <th>
-            Ingredientes
-          </th>
-
-          <th>
-            Custo total
-          </th>
-
-          <th>
-            Ações
-          </th>
-
+          <th>Produto final</th>
+          <th>Ingredientes</th>
+          <th>Custo total</th>
+          <th>Ações</th>
         </tr>
-
       </thead>
 
-
       <tbody>
-
         ${
-          state.fichas
-            .map(
-              (ficha) => `
+          fichasFiltradas.length
+            ? fichasFiltradas
+                .map((ficha) => {
+const ingredientesTexto =
+  ficha.itens && ficha.itens.length
+    ? ficha.itens
+        .map((item) => {
+          return `${escapeHTML(
+            item.produto || ""
+          )} (${Number(item.qtd || 0)} ${escapeHTML(
+            item.unidade || ""
+          )})`;
+        })
+        .filter(Boolean)
+        .join(", ")
+    : "Nenhum ingrediente";
 
-                <tr>
+                  return `
+                    <tr>
+                      <td>
+                        <strong>
+                          ${escapeHTML(ficha.nome)}
+                        </strong>
+                      </td>
 
-                  <td>
-                    ${escapeHTML(
-                      ficha.nome
-                    )}
-                  </td>
+                      <td>
+                        ${ingredientesTexto}
+                      </td>
 
+                      <td>
+                        ${BRL(ficha.custoTotal)}
+                      </td>
 
-                  <td>
-
-                    ${
-                      ficha.itens?.length
-
-                        ? `
-
-                          <div
-                            class="list-inline"
+                      <td>
+                        <div class="actions-row">
+                          <button
+                            type="button"
+                            data-edit-ficha="${ficha.id}"
                           >
+                            Editar
+                          </button>
 
-                            ${ficha.itens
-                              .map(
-                                (item) => `
-
-                                  <span
-                                    class="pill"
-                                  >
-
-                                    ${escapeHTML(
-                                      item.produto
-                                    )}:
-
-                                    ${Number(
-                                      item.qtd ||
-                                        0
-                                    )}
-
-                                    ${escapeHTML(
-                                      item.unidade
-                                    )}
-
-                                  </span>
-
-                                `
-                              )
-                              .join("")}
-
-                          </div>
-
-                        `
-
-                        : "Sem itens"
-                    }
-
-                  </td>
-
-
-                  <td>
-                    ${BRL(
-                      ficha.custoTotal
-                    )}
-                  </td>
-
-
-                  <td>
-
-                    <div
-                      class="actions-row"
-                    >
-
-                      <button
-                        class="secondary"
-                        data-edit-ficha="${ficha.id}"
-                      >
-                        ✏️ Editar
-                      </button>
-
-
-                      <button
-                        class="secondary"
-                        data-del-ficha="${ficha.id}"
-                      >
-                        🗑️ Excluir
-                      </button>
-
-                    </div>
-
-                  </td>
-
-                </tr>
-
-              `
-            )
-            .join("")
-
-          ||
-
-          `
-
-            <tr>
-
-              <td colspan="4">
-                Sem fichas cadastradas.
-              </td>
-
-            </tr>
-
-          `
+                          <button
+                            type="button"
+                            class="secondary"
+                            data-del-ficha="${ficha.id}"
+                          >
+                            Excluir
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  `;
+                })
+                .join("")
+            : `
+              <tr>
+                <td colspan="4">
+                  Nenhuma ficha encontrada.
+                </td>
+              </tr>
+            `
         }
-
       </tbody>
-
     </table>
-
   `;
 
+  /* =========================================================
+     NOVA FICHA
+  ========================================================= */
 
-  panel.querySelector(
-    "#btn-cadastro-ficha"
-  ).onclick =
-    () => {
+  const btnNovaFicha = document.getElementById("btn-nova-ficha");
+  const formFicha = document.getElementById("f-ficha");
+  const cancelarFicha = document.getElementById("cancelar-ficha");
 
-      panel
-        .querySelector(
-          "#f-ficha-produto"
-        )
-        .scrollIntoView({
-          behavior: "smooth",
-        });
+  btnNovaFicha?.addEventListener("click", () => {
+    formFicha.classList.remove("hidden");
+    document.getElementById("f-ficha-produto")?.focus();
+  });
 
-    };
+  cancelarFicha?.addEventListener("click", () => {
+    formFicha.reset();
+    formFicha.classList.add("hidden");
+  });
 
+  formFicha?.addEventListener("submit", (event) => {
+    event.preventDefault();
 
-  panel.querySelector(
-    "#btn-cadastro-item"
-  ).onclick =
-    () => {
+    const nome = document
+      .getElementById("f-ficha-produto")
+      .value.trim();
 
-      panel
-        .querySelector(
-          "#f-ficha-item"
-        )
-        .scrollIntoView({
-          behavior: "smooth",
-        });
+    if (!nome) {
+      return;
+    }
 
-    };
+    state.fichas.push({
+      id: uid(),
+      nome,
+      itens: [],
+      custoTotal: 0,
+    });
 
+    saveData();
+    renderAll();
+  });
 
-  panel.querySelector(
-    "#f-ficha-produto"
-  ).onsubmit =
-    (event) => {
+  /* =========================================================
+     ADICIONAR INGREDIENTE À FICHA
+  ========================================================= */
 
-      event.preventDefault();
+  const formFichaItem = document.getElementById("f-ficha-item");
 
+  formFichaItem?.addEventListener("submit", (event) => {
+    event.preventDefault();
 
-      const formData =
-        new FormData(
-          event.target
+    const fichaId =
+      document.getElementById("fichaId").value;
+
+    const ingredienteId =
+      document.getElementById("ingredienteId").value;
+
+    const quantidadeUso = Number(
+      document.getElementById("quantidadeUso").value
+    );
+
+    if (
+      !fichaId ||
+      !ingredienteId ||
+      !Number.isFinite(quantidadeUso) ||
+      quantidadeUso <= 0
+    ) {
+      return;
+    }
+
+    const ficha = getFicha(fichaId);
+
+    if (!ficha) {
+      return;
+    }
+
+    if (!Array.isArray(ficha.itens)) {
+      ficha.itens = [];
+    }
+
+    ficha.itens.push({
+      ingredienteId,
+      quantidadeUso,
+    });
+
+    recalculateFicha(ficha);
+    syncSalesForFicha(ficha.id);
+
+    saveData();
+    renderAll();
+  });
+
+  /* =========================================================
+     FILTRO
+  ========================================================= */
+
+  const filtro = document.getElementById(
+    "filtro-ficha-produto"
+  );
+
+  filtro?.addEventListener("input", (event) => {
+    const cursorPosition = event.target.selectionStart;
+
+    renderFichas.searchTerm = event.target.value;
+
+    renderFichas();
+
+    const novoCampo = document.getElementById(
+      "filtro-ficha-produto"
+    );
+
+    if (novoCampo) {
+      novoCampo.focus();
+
+      const position = Math.min(
+        cursorPosition ?? novoCampo.value.length,
+        novoCampo.value.length
+      );
+
+      novoCampo.setSelectionRange(position, position);
+    }
+  });
+
+  /* =========================================================
+     ORDENAÇÃO
+  ========================================================= */
+
+  const ordenacao = document.getElementById(
+    "ordenacao-ficha"
+  );
+
+  ordenacao?.addEventListener("change", (event) => {
+    renderFichas.sortOrder = event.target.value;
+
+    renderFichas();
+  });
+
+  /* =========================================================
+     EDITAR
+  ========================================================= */
+
+  panel
+    .querySelectorAll("[data-edit-ficha]")
+    .forEach((button) => {
+      button.addEventListener("click", () => {
+        editFicha(button.dataset.editFicha);
+      });
+    });
+
+  /* =========================================================
+     EXCLUIR
+  ========================================================= */
+
+panel
+  .querySelectorAll(
+    "[data-del-ficha]"
+  )
+  .forEach((button) => {
+
+    button.onclick = () => {
+
+      const fichaId =
+        button.dataset.delFicha;
+
+      state.fichas =
+        state.fichas.filter(
+          (ficha) =>
+            ficha.id !== fichaId
         );
 
-
-      const nome =
-        String(
-          formData.get(
-            "nome"
-          ) || ""
-        ).trim();
-
-
-      if (!nome) return;
-
-
-      state.fichas.push({
-
-        id: uid(),
-
-        nome,
-
-        itens: [],
-
-        custoTotal: 0,
-
-      });
-
-
-      event.target.reset();
+      state.vendas =
+        state.vendas.filter(
+          (sale) =>
+            sale.fichaId !== fichaId
+        );
 
       renderAll();
 
     };
 
-
-  panel.querySelector(
-    "#f-ficha-item"
-  ).onsubmit =
-    (event) => {
-
-      event.preventDefault();
-
-
-      const formData =
-        new FormData(
-          event.target
-        );
-
-
-      const ficha =
-        getFicha(
-          formData.get(
-            "fichaId"
-          )
-        );
-
-
-      const ingredient =
-        getIngredient(
-          formData.get(
-            "ingredienteId"
-          )
-        );
-
-
-      if (
-        !ficha ||
-        !ingredient
-      ) {
-
-        alert(
-          "Selecione ficha e ingrediente válidos."
-        );
-
-        return;
-
-      }
-
-
-      const qtd =
-        Number(
-          formData.get(
-            "quantidadeUso"
-          )
-        );
-
-
-      if (qtd <= 0) {
-
-        alert(
-          "A quantidade usada deve ser maior que zero."
-        );
-
-        return;
-
-      }
-
-
-      ficha.itens.push({
-
-        ingredienteId:
-          ingredient.id,
-
-        produto:
-          ingredient.produto,
-
-        unidade:
-          ingredient.unidade,
-
-        qtd,
-
-        custo:
-          qtd *
-          Number(
-            ingredient.valorUnitario ||
-              0
-          ),
-
-      });
-
-
-      recalculateFicha(
-        ficha
-      );
-
-
-      syncSalesForFicha(
-        ficha.id
-      );
-
-
-      event.target.reset();
-
-      renderAll();
-
-    };
-
-
-  panel
-    .querySelectorAll(
-      "[data-edit-ficha]"
-    )
-    .forEach(
-      (button) => {
-
-        button.onclick =
-          () => {
-
-            editFicha(
-              button.dataset
-                .editFicha
-            );
-
-          };
-
-      }
-    );
-
-
-  panel
-    .querySelectorAll(
-      "[data-del-ficha]"
-    )
-    .forEach(
-      (button) => {
-
-        button.onclick =
-          () => {
-
-            const fichaId =
-              button.dataset
-                .delFicha;
-
-
-            state.fichas =
-              state.fichas.filter(
-                (ficha) =>
-                  ficha.id !==
-                  fichaId
-              );
-
-
-            state.vendas =
-              state.vendas.filter(
-                (sale) =>
-                  sale.fichaId !==
-                  fichaId
-              );
-
-
-            renderAll();
-
-          };
-
-      }
-    );
-
+  });
 }
 
+/* Estado dos filtros da Ficha Técnica */
+renderFichas.searchTerm = "";
+renderFichas.sortOrder = "az";
 
 /* =========================================================
    VENDAS
 ========================================================= */
-
 function renderVendas() {
-
-  const panel =
-    document.getElementById(
-      "vendas-panel"
-    );
-
+  const panel = document.getElementById("vendas-panel");
 
   if (!panel) return;
 
+  const vendasFiltradas = filterAndSort(
+    state.vendas,
+    renderVendas.searchTerm,
+    (sale) => sale.produto,
+    renderVendas.sortOrder
+  );
 
   panel.innerHTML = `
-
-    <h2>
-      Venda
-    </h2>
-
+    <h2>Venda</h2>
 
     <button
       class="toggle-btn"
@@ -2166,39 +2239,26 @@ function renderVendas() {
       + Cadastrar Venda
     </button>
 
-
-    <form
-      id="f-venda"
-    >
+    <form id="f-venda">
 
       <select
         required
         name="fichaId"
       >
-
         <option value="">
           Selecione o produto final
         </option>
 
-
         ${state.fichas
           .map(
             (ficha) => `
-
-              <option
-                value="${ficha.id}"
-              >
-                ${escapeHTML(
-                  ficha.nome
-                )}
+              <option value="${ficha.id}">
+                ${escapeHTML(ficha.nome)}
               </option>
-
             `
           )
           .join("")}
-
       </select>
-
 
       <input
         required
@@ -2209,7 +2269,6 @@ function renderVendas() {
         placeholder="Lucro desejado (%)"
       />
 
-
       <input
         required
         type="number"
@@ -2219,337 +2278,365 @@ function renderVendas() {
         placeholder="Preço de venda praticado"
       />
 
-
       <button type="submit">
         Salvar venda
       </button>
 
     </form>
 
+    <div class="filters-row">
+
+      <div class="search-box">
+        <span class="search-icon">🔎</span>
+
+        <input
+          id="filtro-venda-produto"
+          type="search"
+          placeholder="Buscar produto..."
+          value="${escapeHTML(renderVendas.searchTerm)}"
+        />
+      </div>
+
+      <select
+        id="ordenacao-venda"
+        class="sort-select"
+      >
+        <option
+          value="az"
+          ${renderVendas.sortOrder === "az" ? "selected" : ""}
+        >
+          A → Z
+        </option>
+
+        <option
+          value="za"
+          ${renderVendas.sortOrder === "za" ? "selected" : ""}
+        >
+          Z → A
+        </option>
+      </select>
+
+    </div>
+
+    <div
+      id="info-filtro-venda"
+      class="filter-info"
+    >
+      ${vendasFiltradas.length} venda(s) encontrada(s)
+    </div>
 
     <table>
 
       <thead>
-
         <tr>
-
-          <th>
-            Produto
-          </th>
-
-          <th>
-            Preço sugerido
-          </th>
-
-          <th>
-            Praticado
-          </th>
-
-          <th>
-            Status
-          </th>
-
-          <th>
-            Lucro
-          </th>
-
-          <th>
-            Ficha
-          </th>
-
-          <th>
-            Ações
-          </th>
-
+          <th>Produto</th>
+          <th>Preço sugerido</th>
+          <th>Praticado</th>
+          <th>Status</th>
+          <th>Lucro</th>
+          <th>Ficha</th>
+          <th>Ações</th>
         </tr>
-
       </thead>
-
 
       <tbody>
 
         ${
-          state.vendas
-            .map(
-              (sale) => {
+          vendasFiltradas.length
+            ? vendasFiltradas
+                .map((sale) => {
 
-                const currentStatus =
-                  calculateSaleStatus(
-                    sale.precoPraticado,
-                    sale.precoSugerido,
-                    sale.lucro,
-                    sale.margemPct
-                  );
+                  const currentStatus =
+                    calculateSaleStatus(
+                      sale.precoPraticado,
+                      sale.precoSugerido,
+                      sale.lucro,
+                      sale.margemPct
+                    );
 
+                  sale.status = currentStatus;
 
-                sale.status =
-                  currentStatus;
+                  return `
+                    <tr>
 
+                      <td>
+                        ${escapeHTML(sale.produto)}
+                      </td>
 
-                return `
+                      <td>
+                        ${BRL(sale.precoSugerido)}
+                      </td>
 
-                  <tr>
+                      <td>
+                        ${BRL(sale.precoPraticado)}
+                      </td>
 
-                    <td>
-                      ${escapeHTML(
-                        sale.produto
-                      )}
-                    </td>
+                      <td>
+                        ${statusBadge(currentStatus)}
+                      </td>
 
+                      <td>
+                        ${BRL(sale.lucro)}
+                      </td>
 
-                    <td>
-                      ${BRL(
-                        sale.precoSugerido
-                      )}
-                    </td>
-
-
-                    <td>
-                      ${BRL(
-                        sale.precoPraticado
-                      )}
-                    </td>
-
-
-                    <td>
-                      ${statusBadge(
-                        currentStatus
-                      )}
-                    </td>
-
-
-                    <td>
-                      ${BRL(
-                        sale.lucro
-                      )}
-                    </td>
-
-
-                    <td>
-
-                      <button
-                        class="secondary"
-                        data-open-ficha="${sale.fichaId}"
-                      >
-                        Acessar ficha
-                      </button>
-
-                    </td>
-
-
-                    <td>
-
-                      <div
-                        class="actions-row"
-                      >
-
+                      <td>
                         <button
                           class="secondary"
-                          data-edit-venda="${sale.id}"
+                          data-open-ficha="${sale.fichaId}"
                         >
-                          ✏️ Editar
+                          Acessar ficha
                         </button>
+                      </td>
 
+                      <td>
 
-                        <button
-                          class="secondary"
-                          data-del-venda="${sale.id}"
-                        >
-                          🗑️ Excluir
-                        </button>
+                        <div class="actions-row">
 
-                      </div>
+                          <button
+                            class="secondary"
+                            data-edit-venda="${sale.id}"
+                          >
+                            ✏️ Editar
+                          </button>
 
-                    </td>
+                          <button
+                            class="secondary"
+                            data-del-venda="${sale.id}"
+                          >
+                            🗑️ Excluir
+                          </button>
 
-                  </tr>
+                        </div>
 
-                `;
+                      </td>
 
-              }
-            )
-            .join("")
-
-          ||
-
-          `
-
-            <tr>
-
-              <td colspan="7">
-                Sem vendas cadastradas.
-              </td>
-
-            </tr>
-
-          `
+                    </tr>
+                  `;
+                })
+                .join("")
+            : `
+              <tr>
+                <td colspan="7">
+                  ${
+                    renderVendas.searchTerm
+                      ? "Nenhuma venda encontrada para essa busca."
+                      : "Sem vendas cadastradas."
+                  }
+                </td>
+              </tr>
+            `
         }
 
       </tbody>
 
     </table>
-
   `;
 
+  /* =========================================================
+     BOTÃO CADASTRO
+  ========================================================= */
 
-  panel.querySelector(
-    "#btn-cadastro-venda"
-  ).onclick =
-    () => {
+  panel.querySelector("#btn-cadastro-venda").onclick = () => {
 
-      panel
-        .querySelector(
-          "#f-venda"
-        )
-        .scrollIntoView({
-          behavior: "smooth",
-        });
+    panel
+      .querySelector("#f-venda")
+      .scrollIntoView({
+        behavior: "smooth",
+      });
 
-    };
+  };
 
+  /* =========================================================
+     CADASTRO DE VENDA
+  ========================================================= */
 
-  panel.querySelector(
-    "#f-venda"
-  ).onsubmit =
+  panel.querySelector("#f-venda").onsubmit = (event) => {
+
+    event.preventDefault();
+
+    const formData = new FormData(event.target);
+
+    const ficha = getFicha(
+      formData.get("fichaId")
+    );
+
+    if (!ficha) {
+
+      alert(
+        "Selecione uma ficha válida."
+      );
+
+      return;
+    }
+
+    const values = calculateSaleValues(
+      ficha,
+      Number(
+        formData.get("lucroDesejadoPct")
+      ),
+      Number(
+        formData.get("precoPraticado")
+      )
+    );
+
+    state.vendas.push({
+
+      id: uid(),
+
+      fichaId:
+        ficha.id,
+
+      produto:
+        ficha.nome,
+
+      ...values,
+
+    });
+
+    event.target.reset();
+
+    renderAll();
+
+  };
+
+  /* =========================================================
+     FILTRO DE BUSCA
+  ========================================================= */
+
+  const filtro =
+    panel.querySelector(
+      "#filtro-venda-produto"
+    );
+
+  filtro?.addEventListener(
+    "input",
     (event) => {
 
-      event.preventDefault();
+      const cursorPosition =
+        event.target.selectionStart;
 
+      renderVendas.searchTerm =
+        event.target.value;
 
-      const formData =
-        new FormData(
-          event.target
+      renderVendas();
+
+      const novoCampo =
+        document.getElementById(
+          "filtro-venda-produto"
         );
 
+      if (novoCampo) {
 
-      const ficha =
-        getFicha(
-          formData.get(
-            "fichaId"
-          )
+        novoCampo.focus();
+
+        const position =
+          Math.min(
+            cursorPosition ?? novoCampo.value.length,
+            novoCampo.value.length
+          );
+
+        novoCampo.setSelectionRange(
+          position,
+          position
         );
-
-
-      if (!ficha) {
-
-        alert(
-          "Selecione uma ficha válida."
-        );
-
-        return;
 
       }
 
+    }
+  );
 
-      const values =
-        calculateSaleValues(
-          ficha,
+  /* =========================================================
+     ORDENAÇÃO
+  ========================================================= */
 
-          Number(
-            formData.get(
-              "lucroDesejadoPct"
-            )
-          ),
+  const ordenacao =
+    panel.querySelector(
+      "#ordenacao-venda"
+    );
 
-          Number(
-            formData.get(
-              "precoPraticado"
-            )
-          )
-        );
+  ordenacao?.addEventListener(
+    "change",
+    (event) => {
 
+      renderVendas.sortOrder =
+        event.target.value;
 
-      state.vendas.push({
+      renderVendas();
 
-        id: uid(),
+    }
+  );
 
-        fichaId:
-          ficha.id,
-
-        produto:
-          ficha.nome,
-
-        ...values,
-
-      });
-
-
-      event.target.reset();
-
-      renderAll();
-
-    };
-
+  /* =========================================================
+     EDITAR VENDA
+  ========================================================= */
 
   panel
     .querySelectorAll(
       "[data-edit-venda]"
     )
-    .forEach(
-      (button) => {
+    .forEach((button) => {
 
-        button.onclick =
-          () => {
+      button.onclick = () => {
 
-            editVenda(
-              button.dataset
-                .editVenda
-            );
+        editVenda(
+          button.dataset.editVenda
+        );
 
-          };
+      };
 
-      }
-    );
+    });
 
+  /* =========================================================
+     EXCLUIR VENDA
+  ========================================================= */
 
   panel
     .querySelectorAll(
       "[data-del-venda]"
     )
-    .forEach(
-      (button) => {
+    .forEach((button) => {
 
-        button.onclick =
-          () => {
+      button.onclick = () => {
 
-            state.vendas =
-              state.vendas.filter(
-                (sale) =>
-                  sale.id !==
-                  button.dataset
-                    .delVenda
-              );
+        state.vendas =
+          state.vendas.filter(
+            (sale) =>
+              sale.id !==
+              button.dataset.delVenda
+          );
 
+        renderAll();
 
-            renderAll();
+      };
 
-          };
+    });
 
-      }
-    );
-
+  /* =========================================================
+     ACESSAR FICHA
+  ========================================================= */
 
   panel
     .querySelectorAll(
       "[data-open-ficha]"
     )
-    .forEach(
-      (button) => {
+    .forEach((button) => {
 
-        button.onclick =
-          () => {
+      button.onclick = () => {
 
-            showTab(
-              "fichas"
-            );
+        showTab("fichas");
 
-          };
+      };
 
-      }
-    );
+    });
+
+  /* =========================================================
+     ESTADO DOS FILTROS
+  ========================================================= */
 
 }
 
+renderVendas.searchTerm = "";
+renderVendas.sortOrder = "az";
 
 /* =========================================================
    MODAL
