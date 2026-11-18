@@ -1116,3 +1116,40 @@ tbody tr:hover {
 .filter-info strong {
   color: var(--text);
 }
+
+/* =========================================================
+   ROLAGEM DE INGREDIENTES - EDIÇÃO DA FICHA
+========================================================= */
+
+#ficha-edit-items {
+  max-height: 280px;
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  padding: 10px;
+  margin: 10px 0;
+
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+
+  background: #faf7f3;
+}
+
+/* Barra de rolagem */
+#ficha-edit-items::-webkit-scrollbar {
+  width: 8px;
+}
+
+#ficha-edit-items::-webkit-scrollbar-track {
+  background: #eee5dc;
+  border-radius: 10px;
+}
+
+#ficha-edit-items::-webkit-scrollbar-thumb {
+  background: var(--sidebar);
+  border-radius: 10px;
+}
+
+#ficha-edit-items::-webkit-scrollbar-thumb:hover {
+  background: var(--btn-hover);
+}
