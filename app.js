@@ -3603,30 +3603,16 @@ function editVenda(id) {
         name="fichaId"
       >
 
-        ${state.fichas
-          .map(
-            (ficha) => `
-
-              <option
-                value="${ficha.id}"
-
-                ${
-                  ficha.id ===
-                  sale.fichaId
-                    ? "selected"
-                    : ""
-                }
-              >
-
-                ${escapeHTML(
-                  ficha.nome
-                )}
-
-              </option>
-
-            `
-          )
-          .join("")}
+       ${[...state.fichas]
+  .sort((a, b) => 
+    (a.nome || "").localeCompare(b.nome || "", "pt-BR")
+  )
+  .map((ficha) => `
+    <option value="${ficha.id}">
+      ${escapeHTML(ficha.nome)}
+    </option>
+  `)
+  .join("")}
 
       </select>
 
